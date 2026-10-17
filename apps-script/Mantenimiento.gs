@@ -5,12 +5,12 @@
 function limpiarPruebas_(aplicar) {
   var rend = leer_('RENDICIONES');
   var gastos = leer_('GASTOS');
-  var info = { rendiciones: rend.length, gastos: gastos.length, carpetas: [], aplicado: !!aplicar };
+  var info = { rendiciones: rend.length, gastos: gastos.length, personas: leer_('PERSONAS').length, carpetas: [], aplicado: !!aplicar };
   var raiz = carpeta_();
   var it = raiz.getFolders();
   while (it.hasNext()) info.carpetas.push(it.next().getName());
   if (!aplicar) return info;
-  ['RENDICIONES', 'GASTOS'].forEach(function (n) {
+  ['RENDICIONES', 'GASTOS', 'PERSONAS'].forEach(function (n) {
     var sh = hoja_(n);
     if (sh.getLastRow() > 1) sh.deleteRows(2, sh.getLastRow() - 1);
   });
