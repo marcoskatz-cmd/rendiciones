@@ -61,7 +61,8 @@ function gastoPublico_(g) {
     area: g.area,
     persona: g.persona,
     persona_dni: g.persona_dni,
-    tiene_foto: !!g.foto_comprobante,
+    recibo_id: g.recibo_id,
+    tiene_foto: !!g.fotos,
     tiene_firma: !!g.firma,
     ts: g.ts
   };
@@ -121,18 +122,23 @@ function leer_comprobante_(p) {
 
 // ---------- gastos ----------
 
-function validarGasto_(p) {
+function validarCarga_(p) {
   if (TIPOS_GASTO.indexOf(p.tipo) === -1) throw new Error('Elegí si es un ticket o una transferencia.');
-  var monto = Number(p.monto);
-  if (!(monto > 0)) throw new Error('El monto tiene que ser mayor a cero.');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.fecha || ''))) throw new Error('Falta la fecha del gasto.');
-  if (!String(p.area || '').trim()) throw new Error('Elegí el área a la que corresponde el gasto.');
-  if (!String(p.comercio || '').trim()) throw new Error(p.tipo === 'ticket' ? 'Falta el nombre del comercio.' : 'Falta a quién se transfirió.');
+  var lineas = Array.isArray(p.lineas) ? p.lineas : [];
+  if (!lineas.length) throw new Error('No hay ningún gasto cargado.');
+  lineas.forEach(function (l, i) {
+    var n = 'Gasto ' + (i + 1) + ': ';
+    if (!(Number(l.monto) > 0)) throw new Error(n + 'el monto tiene que ser mayor a cero.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(l.fecha || ''))) throw new Error(n + 'falta la fecha.');
+    if (!String(l.area || '').trim()) throw new Error(n + 'falta el área.');
+    if (!String(l.comercio || '').trim()) throw new Error(n + (p.tipo === 'ticket' ? 'falta el comercio.' : 'falta a quién se transfirió.'));
+  });
+  var imagenes = Array.isArray(p.imagenes) ? p.imagenes.filter(Boolean) : [];
+  if (!imagenes.length) throw new Error(p.tipo === 'ticket' ? 'Falta la foto de los tickets.' : 'Falta la captura de la transferencia.');
   if (p.tipo === 'ticket') {
     if (!String(p.persona || '').trim()) throw new Error('Falta el nombre de quien recibe el reintegro.');
     if (!p.firma) throw new Error('Falta la firma de quien recibe el reintegro.');
   }
-  if (!p.imagen) throw new Error(p.tipo === 'ticket' ? 'Falta la foto del ticket.' : 'Falta la captura de la transferencia.');
 }
 
 function recordarPersona_(nombre, dni) {
@@ -149,48 +155,61 @@ function recordarPersona_(nombre, dni) {
 }
 
 /**
- * Guarda un gasto. Si es ticket, el recibo queda firmado y listo para el PDF.
+ * Guarda una carga: una o más fotos, una o más líneas de gasto y, si es ticket,
+ * UNA persona que firma UN recibo por el total. Cada línea es una fila de GASTOS;
+ * todas comparten recibo_id y las fotos.
  * op_id evita duplicar si se corta la respuesta y el celular reintenta.
  */
 function guardar_gasto_(p) {
   var repetido = buscarPorOpId_('GASTOS', p.op_id);
-  if (repetido) return { gasto: gastoPublico_(repetido), rendicion: resumenRendicion_(rendicionAbierta_()), repetido: true };
+  if (repetido) return { gastos: [gastoPublico_(repetido)], rendicion: resumenRendicion_(rendicionAbierta_()), repetido: true };
 
-  validarGasto_(p);
+  validarCarga_(p);
   var r = abrirRendicionSiHaceFalta_();
-  var gastos = gastosDe_(r.id);
-  var numero = gastos.length ? Math.max.apply(null, gastos.map(function (g) { return Number(g.numero) || 0; })) + 1 : 1;
-  var base = 'R' + numeroStr_(r.numero) + '-' + numeroStr_(numero);
+  var existentes = gastosDe_(r.id);
+  var numero = existentes.length ? Math.max.apply(null, existentes.map(function (g) { return Number(g.numero) || 0; })) : 0;
+  var reciboId = uuid_();
+  var base = 'R' + numeroStr_(r.numero) + '-' + reciboId.substring(0, 8);
 
-  var foto = guardarImagen_(p.imagen, r.numero, base + '-' + (p.tipo === 'ticket' ? 'ticket' : 'transferencia'));
-  var firma = p.tipo === 'ticket' ? guardarImagen_(p.firma, r.numero, base + '-firma') : { id: '', url: '' };
+  var fotos = p.imagenes.map(function (img, i) {
+    return guardarImagen_(img, r.numero, base + '-' + (p.tipo === 'ticket' ? 'tickets' : 'transferencia') + '-' + (i + 1)).url;
+  });
+  var firma = p.tipo === 'ticket' ? guardarImagen_(p.firma, r.numero, base + '-firma').url : '';
+  var persona = p.tipo === 'ticket' ? String(p.persona).trim() : '';
+  var dni = p.tipo === 'ticket' ? String(p.persona_dni || '').trim() : '';
 
-  var g = {
-    id: uuid_(),
-    rendicion_id: r.id,
-    numero: numero,
-    tipo: p.tipo,
-    fecha: String(p.fecha),
-    monto: Number(p.monto),
-    comercio: String(p.comercio || '').trim(),
-    concepto: String(p.concepto || '').trim(),
-    area: String(p.area).trim(),
-    persona: p.tipo === 'ticket' ? String(p.persona).trim() : '',
-    persona_dni: p.tipo === 'ticket' ? String(p.persona_dni || '').trim() : '',
-    detalle_claude: p.detalle_claude ? JSON.stringify(p.detalle_claude).slice(0, 2000) : '',
-    foto_comprobante: foto.url,
-    firma: firma.url,
-    recibo_html: '',
-    ts: tsStr_(),
-    anulado: '',
-    op_id: p.op_id || ''
-  };
-  agregar_('GASTOS', g);
-  if (g.persona) recordarPersona_(g.persona, g.persona_dni);
+  var creados = [];
+  p.lineas.forEach(function (l, i) {
+    numero += 1;
+    var g = {
+      id: uuid_(),
+      rendicion_id: r.id,
+      numero: numero,
+      recibo_id: reciboId,
+      tipo: p.tipo,
+      fecha: String(l.fecha),
+      monto: Number(l.monto),
+      comercio: String(l.comercio || '').trim(),
+      concepto: String(l.concepto || '').trim(),
+      area: String(l.area).trim(),
+      persona: persona,
+      persona_dni: dni,
+      detalle_claude: i === 0 && p.detalle_claude ? JSON.stringify(p.detalle_claude).slice(0, 4000) : '',
+      fotos: fotos.join(' | '),
+      firma: firma,
+      ts: tsStr_(),
+      anulado: '',
+      op_id: i === 0 ? (p.op_id || '') : ''
+    };
+    agregar_('GASTOS', g);
+    creados.push(gastoPublico_(g));
+  });
+  if (persona) recordarPersona_(persona, dni);
   actualizarTotales_(r);
-  log_(CFG.RESPONSABLE, 'GASTO', base + ' ' + g.tipo + ' $' + g.monto + ' ' + g.area, '');
+  var total = creados.reduce(function (a, g) { return a + g.monto; }, 0);
+  log_(CFG.RESPONSABLE, 'CARGA', base + ' ' + p.tipo + ' ' + creados.length + ' líneas $' + total + (persona ? ' → ' + persona : ''), '');
 
-  return { gasto: gastoPublico_(g), rendicion: resumenRendicion_(rendicionAbierta_()), repetido: false };
+  return { gastos: creados, recibo_id: reciboId, total: total, rendicion: resumenRendicion_(rendicionAbierta_()), repetido: false };
 }
 
 function actualizarTotales_(r) {

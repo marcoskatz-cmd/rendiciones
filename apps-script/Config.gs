@@ -38,9 +38,9 @@ var HOJAS = {
     'cantidad_gastos', 'total', 'pdf_url', 'pdf_id', 'op_id'
   ],
   GASTOS: [
-    'id', 'rendicion_id', 'numero', 'tipo', 'fecha', 'monto', 'comercio',
+    'id', 'rendicion_id', 'numero', 'recibo_id', 'tipo', 'fecha', 'monto', 'comercio',
     'concepto', 'area', 'persona', 'persona_dni', 'detalle_claude',
-    'foto_comprobante', 'firma', 'recibo_html', 'ts', 'anulado', 'op_id'
+    'fotos', 'firma', 'ts', 'anulado', 'op_id'
   ],
   AREAS: ['area', 'activo'],
   PERSONAS: ['nombre', 'dni', 'activo'],

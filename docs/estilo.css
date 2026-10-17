@@ -158,3 +158,9 @@ footer img { height: 28px; background: var(--azul); padding: 4px 10px; border-ra
 .historial-item { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; border-bottom: 1px solid var(--borde); padding: 0.75rem 0; }
 .historial-item:last-child { border-bottom: 0; }
 .historial-item a { color: var(--acento); font-weight: 700; text-decoration: none; white-space: nowrap; }
+
+/* ---- líneas de gasto (varios tickets por carga) ---- */
+.linea-gasto { border: 1px solid var(--borde); border-radius: 0.8rem; padding: 0.8rem; margin-bottom: 0.8rem; background: #fafcfd; }
+.linea-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.linea-cab .quitar { background: none; border: 1px solid var(--grave); color: var(--grave); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.85rem; }
+.gasto .n { font-size: 1.2rem; }

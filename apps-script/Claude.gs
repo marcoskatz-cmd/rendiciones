@@ -1,40 +1,53 @@
 /**
  * Lectura de comprobantes con Claude.
  *
- * Agustín saca la foto; acá se la mandamos a Claude y vuelve un JSON con
- * tipo, monto, fecha, comercio/destinatario y concepto. Él solo confirma o corrige.
- * La clave vive en Script Properties (ANTHROPIC_API_KEY) y nunca viaja al celular.
+ * Agustín saca la foto (puede haber VARIOS tickets en la misma foto); Claude
+ * devuelve una lista con tipo, monto, fecha, comercio y concepto de cada uno.
+ * Él solo confirma o corrige. La clave vive en Script Properties
+ * (ANTHROPIC_API_KEY) y nunca viaja al celular.
  */
 
-var ESQUEMA_COMPROBANTE = {
+var ESQUEMA_COMPROBANTES = {
   type: 'object',
   properties: {
-    tipo: { type: 'string', enum: ['ticket', 'factura', 'recibo', 'transferencia', 'otro', 'ilegible'] },
-    monto: { type: 'number', description: 'Importe total en pesos. 0 si no se lee.' },
-    fecha: { type: 'string', description: 'yyyy-MM-dd o vacío si no se lee.' },
-    comercio: { type: 'string', description: 'Nombre del comercio o, en una transferencia, el destinatario.' },
-    concepto: { type: 'string', description: 'Qué se compró o pagó, en pocas palabras, en español.' },
-    cuit: { type: 'string', description: 'CUIT del comercio si aparece, si no vacío.' },
-    confianza: { type: 'string', enum: ['alta', 'media', 'baja'] },
-    observacion: { type: 'string', description: 'Algo que Agustín deba revisar (monto borroso, fecha dudosa, etc.). Vacío si nada.' }
+    comprobantes: {
+      type: 'array',
+      description: 'Un elemento por cada comprobante distinto que haya en la imagen. Vacío si no hay ninguno legible.',
+      items: {
+        type: 'object',
+        properties: {
+          tipo: { type: 'string', enum: ['ticket', 'factura', 'recibo', 'transferencia', 'otro'] },
+          monto: { type: 'number', description: 'Importe total en pesos. 0 si no se lee.' },
+          fecha: { type: 'string', description: 'yyyy-MM-dd o vacío si no se lee.' },
+          comercio: { type: 'string', description: 'Nombre del comercio o, en una transferencia, el destinatario.' },
+          concepto: { type: 'string', description: 'Qué se compró o pagó, en pocas palabras, en español.' },
+          confianza: { type: 'string', enum: ['alta', 'media', 'baja'] },
+          observacion: { type: 'string', description: 'Algo a revisar (monto borroso, fecha dudosa). Vacío si nada.' }
+        },
+        required: ['tipo', 'monto', 'fecha', 'comercio', 'concepto', 'confianza', 'observacion'],
+        additionalProperties: false
+      }
+    },
+    observacion_general: { type: 'string', description: 'Si la foto está ilegible o hay algo raro en general. Vacío si nada.' }
   },
-  required: ['tipo', 'monto', 'fecha', 'comercio', 'concepto', 'cuit', 'confianza', 'observacion'],
+  required: ['comprobantes', 'observacion_general'],
   additionalProperties: false
 };
 
 var PROMPT_COMPROBANTE =
   'Sos el asistente de rendición de gastos de una constructora en Tucumán, Argentina. ' +
-  'Te mando la foto de un comprobante: puede ser un ticket de compra, una factura, un recibo o la captura ' +
-  'de pantalla de una transferencia bancaria o de billetera virtual (Mercado Pago, Ualá, home banking). ' +
-  'Extraé los datos. Reglas: el monto es el TOTAL final en pesos argentinos, sin símbolo; los decimales ' +
-  'en Argentina se escriben con coma (1.234,50 = 1234.50). La fecha va en formato yyyy-MM-dd; si solo hay ' +
-  'día y mes, asumí el año ' + new Date().getFullYear() + '. En una transferencia, "comercio" es el destinatario ' +
-  '(nombre de la persona o empresa que recibió la plata). Si no podés leer algo, dejalo vacío o en 0 y ' +
-  'bajá la confianza; nunca inventes. Respondé en español.';
+  'Te mando una foto que puede contener UNO O VARIOS comprobantes: tickets de compra, facturas, recibos, ' +
+  'o la captura de una transferencia bancaria o de billetera virtual (Mercado Pago, Ualá, home banking). ' +
+  'Devolvé un elemento por cada comprobante distinto, en el orden en que aparecen (de arriba a abajo, de izquierda a derecha). ' +
+  'Reglas: el monto es el TOTAL final de ese comprobante en pesos argentinos, sin símbolo; los decimales en Argentina ' +
+  'se escriben con coma (1.234,50 = 1234.50); no confundas el subtotal, el IVA ni el vuelto con el total. ' +
+  'La fecha va en formato yyyy-MM-dd; si solo hay día y mes, asumí el año ' + new Date().getFullYear() + '. ' +
+  'En una transferencia, "comercio" es el destinatario (quién recibió la plata). ' +
+  'Si no podés leer algo, dejalo vacío o en 0 y bajá la confianza; nunca inventes. Respondé en español.';
 
 /**
  * @param {string} dataUrl  imagen base64
- * @return {object} según ESQUEMA_COMPROBANTE
+ * @return {{comprobantes: object[], observacion_general: string, tokens: number}}
  */
 function leerComprobante_(dataUrl) {
   var apiKey = prop_('ANTHROPIC_API_KEY');
@@ -48,14 +61,14 @@ function leerComprobante_(dataUrl) {
     max_tokens: CFG.CLAUDE_MAX_TOKENS,
     output_config: {
       effort: 'low',
-      format: { type: 'json_schema', schema: ESQUEMA_COMPROBANTE }
+      format: { type: 'json_schema', schema: ESQUEMA_COMPROBANTES }
     },
     system: [{ type: 'text', text: PROMPT_COMPROBANTE, cache_control: { type: 'ephemeral' } }],
     messages: [{
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } },
-        { type: 'text', text: 'Leé este comprobante y devolvé los datos.' }
+        { type: 'text', text: 'Leé todos los comprobantes de esta foto y devolvé los datos.' }
       ]
     }]
   };
