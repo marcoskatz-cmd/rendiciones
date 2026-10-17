@@ -40,6 +40,10 @@ function doGet(e) {
       exigirBootstrap_(p);
       return json_({ ok: true, data: regenerar_pdf_(p) });
     }
+    if (p.action === 'limpiar_pruebas') {
+      exigirBootstrap_(p);
+      return json_({ ok: true, data: limpiarPruebas_(String(p.aplicar) === 'si') });
+    }
     if (p.action === 'diagnostico') {
       exigirBootstrap_(p);
       return json_({ ok: true, data: diagnosticar_() });

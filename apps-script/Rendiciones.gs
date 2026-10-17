@@ -60,7 +60,7 @@ function gastoPublico_(g) {
     concepto: g.concepto,
     area: g.area,
     persona: g.persona,
-    persona_dni: g.persona_dni,
+    persona_dni: String(g.persona_dni || ''),
     recibo_id: g.recibo_id,
     tiene_foto: !!g.fotos,
     tiene_firma: !!g.firma,
@@ -147,11 +147,11 @@ function recordarPersona_(nombre, dni) {
   var existentes = leer_('PERSONAS');
   for (var i = 0; i < existentes.length; i++) {
     if (existentes[i].nombre.toLowerCase() === nombre.toLowerCase()) {
-      if (dni && !existentes[i].dni) actualizar_('PERSONAS', existentes[i]._fila, { dni: String(dni) });
+      if (dni && !existentes[i].dni) actualizar_('PERSONAS', existentes[i]._fila, { dni: "'" + String(dni) });
       return;
     }
   }
-  agregar_('PERSONAS', { nombre: nombre, dni: String(dni || ''), activo: 'SI' });
+  agregar_('PERSONAS', { nombre: nombre, dni: dni ? "'" + String(dni) : '', activo: 'SI' });
 }
 
 /**
@@ -177,6 +177,8 @@ function guardar_gasto_(p) {
   var firma = p.tipo === 'ticket' ? guardarImagen_(p.firma, r.numero, base + '-firma').url : '';
   var persona = p.tipo === 'ticket' ? String(p.persona).trim() : '';
   var dni = p.tipo === 'ticket' ? String(p.persona_dni || '').trim() : '';
+  // Sheets convierte "30123456" a número aunque la columna sea texto; se guarda con apóstrofe.
+  var dniCelda = dni ? "'" + dni : '';
 
   var creados = [];
   p.lineas.forEach(function (l, i) {
@@ -193,7 +195,7 @@ function guardar_gasto_(p) {
       concepto: String(l.concepto || '').trim(),
       area: String(l.area).trim(),
       persona: persona,
-      persona_dni: dni,
+      persona_dni: dniCelda,
       detalle_claude: i === 0 && p.detalle_claude ? JSON.stringify(p.detalle_claude).slice(0, 4000) : '',
       fotos: fotos.join(' | '),
       firma: firma,

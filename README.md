@@ -52,3 +52,4 @@ Front: `git push` (Pages sirve `docs/`). Subir `?v=N` en `index.html` y `sw.js` 
 
 - `<URL>?action=regenerar_pdf&key=<bootstrap_key>&numero=7` vuelve a armar el PDF de una cerrada.
 - `<URL>?action=diagnostico&key=<bootstrap_key>` lista desvíos de columnas / clave faltante.
+- `<URL>?action=limpiar_pruebas&key=<bootstrap_key>` informa; con `&aplicar=si` borra TODAS las rendiciones, gastos y carpetas de Drive (solo para datos de prueba).
