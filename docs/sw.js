@@ -3,9 +3,9 @@
  * A la API no se le hace caché nunca.
  * Al publicar un cambio subir V acá y el ?v=N en index.html.
  */
-const V = '3';
+const V = '4';
 const CACHE = 'rendiciones-v' + V;
-const ARMAZON = ['./', './index.html', './ayuda.html', './manifest.json', './icono.svg', './logos/ingeco.png',
+const ARMAZON = ['./', './index.html', './ayuda.html', './manifest.json', './icono.svg', './logos/ingeco-azul.png',
   './estilo.css?v=' + V, './api.js?v=' + V, './app.js?v=' + V];
 
 self.addEventListener('install', (e) => {

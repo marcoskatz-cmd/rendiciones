@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Rendiciones — INGECO</title>
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#f5f4f0">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icono.svg">
   <link rel="apple-touch-icon" href="icono.svg">
-  <link rel="stylesheet" href="estilo.css?v=3">
+  <link rel="stylesheet" href="estilo.css?v=4">
   <script src="https://marcoskatz-cmd.github.io/app-ingeco/guard.js" data-modulo="RENDICIONES"></script>
   <script>
     // URL del web app de Apps Script (deploymentId estable). Se reemplaza al desplegar.
@@ -16,33 +16,28 @@
   </script>
 </head>
 <body>
-  <header>
-    <div>
-      <div class="titulo">Rendición de gastos</div>
-      <div class="sub" id="cab-sub">Cargando…</div>
-    </div>
-    <a class="boton-ayuda" href="ayuda.html" title="Cómo se usa">?</a>
+  <header class="barra">
+    <img class="barra-logo" src="logos/ingeco-azul.png" alt="INGECO">
+    <div class="barra-t"><h2>Rendición de gastos</h2><div class="sub-barra" id="cab-sub">Cargando…</div></div>
+    <a class="icono" href="ayuda.html" aria-label="Cómo se usa" title="Cómo se usa"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg></a>
   </header>
 
   <main id="app">
     <div class="tarjeta"><p class="ayuda">Conectando con el servidor…</p></div>
   </main>
 
-  <nav class="barra">
-    <button data-vista="atender" class="activo"><span class="ico">✍️</span>Atender</button>
-    <button data-vista="inicio"><span class="ico">📋</span>Rendición<span class="badge" id="badge-detallar" hidden></span></button>
-    <button data-vista="transferir"><span class="ico">💸</span>Transferir</button>
-    <button data-vista="historial"><span class="ico">🗂️</span>Anteriores</button>
+  <nav class="nav">
+    <button data-vista="atender" class="activo"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM13 7l4 4M3 21h18"/></svg>Atender</button>
+    <button data-vista="inicio"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg>Rendición<span class="badge" id="badge-detallar" hidden></span></button>
+    <button data-vista="transferir"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>Transferir</button>
+    <button data-vista="historial"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Anteriores</button>
   </nav>
 
   <div id="toast" class="toast" hidden></div>
 
-  <footer>
-    <img src="logos/ingeco.png" alt="INGECO" onerror="this.style.display='none'">
-  </footer>
-
-  <script src="api.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  
+  <script src="api.js?v=4"></script>
+  <script src="app.js?v=4"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   </script>

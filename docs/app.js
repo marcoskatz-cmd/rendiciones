@@ -10,6 +10,7 @@
  *  Cerrar     → PDF (solo cuando no queda nada sin detallar).
  */
 
+const ICO = {"pen": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M4 20h4l10-10-4-4L4 16zM13 7l4 4\"/></svg>", "cam": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M4 8h3l2-3h6l2 3h3v11H4z\"/><circle cx=\"12\" cy=\"13\" r=\"3.5\"/></svg>", "gal": "<svg class=\"i\" viewBox=\"0 0 24 24\"><rect x=\"4\" y=\"5\" width=\"16\" height=\"14\" rx=\"2\"/><path d=\"M4 16l5-5 4 4 3-3 4 4\"/><circle cx=\"15.5\" cy=\"9.5\" r=\"1.5\"/></svg>", "ok": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M5 12l5 5 9-10\"/></svg>", "lock": "<svg class=\"i\" viewBox=\"0 0 24 24\"><rect x=\"5\" y=\"11\" width=\"14\" height=\"10\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/></svg>", "pdf": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6\"/></svg>", "plus": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M12 5v14M5 12h14\"/></svg>", "save": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6\"/></svg>", "clock": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M7 3h10M7 21h10M8 3c0 5 4 6 4 9s-4 4-4 9M16 3c0 5-4 6-4 9s4 4 4 9\"/></svg>", "recibo": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21zM9 8h6M9 12h6M9 16h3\"/></svg>", "transf": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M4 7h13l-3-3M20 17H7l3 3\"/></svg>", "edit": "<svg class=\"i\" viewBox=\"0 0 24 24\"><path d=\"M4 20h4l10-10-4-4L4 16zM13 7l4 4\"/></svg>"};
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
 let estado = null;
@@ -124,9 +125,9 @@ function verAtender() {
     <label>Firma de quien cobra</label>
     <canvas class="firma" id="at-canvas"></canvas>
     <div class="fila-botones"><button class="secundaria" id="at-borrar">Borrar firma</button>
-      <label class="secundaria boton-foto" for="at-foto">📷 Foto tickets <span id="at-nfotos"></span></label>
+      <label class="boton-foto" for="at-foto"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg> Foto tickets <span id="at-nfotos"></span></label>
       <input id="at-foto" type="file" accept="image/*" capture="environment"></div>
-    <button class="principal" style="margin-top:.8rem" id="at-guardar" disabled>✅ Guardar y siguiente</button>
+    <button class="principal" style="margin-top:.8rem" id="at-guardar" disabled><svg class="i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg> Guardar y siguiente</button>
     <p class="ayuda" style="margin:.7rem 0 0">La foto de los tickets es opcional acá: si hay cola, la sacás después desde <b>Rendición → Detallar</b>.</p>
   </div>`;
   const inpP = $('#at-persona'), inpT = $('#at-total');
@@ -144,7 +145,7 @@ function verAtender() {
   $('#at-foto').addEventListener('change', async (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    try { fotos.push(await reducirImagen(f)); $('#at-nfotos').textContent = `(${fotos.length})`; toast('📷 Foto guardada en el recibo'); }
+    try { fotos.push(await reducirImagen(f)); $('#at-nfotos').textContent = `(${fotos.length})`; toast('Foto guardada en el recibo'); }
     catch (err) { toast(err.message, true); }
     e.target.value = '';
   });
@@ -156,12 +157,12 @@ function verAtender() {
     try {
       const r = await API.llamar('atender', { op_id: crypto.randomUUID(), persona, persona_dni: p ? p.dni : '', total, firma: firma.dataUrl(), imagenes: fotos });
       await cargarEstado();
-      toast(`✅ ${r.recibo.persona} · ${pesos(r.recibo.total)} · recibo ${r.recibo.numero}`);
+      toast(`${r.recibo.persona} · ${pesos(r.recibo.total)} · recibo guardado`);
       verAtender();
       setTimeout(() => $('#at-persona').focus(), 50);
     } catch (e) {
       toast(e.message, true);
-      $('#at-guardar').textContent = '✅ Guardar y siguiente';
+      $('#at-guardar').innerHTML = ICO.ok + ' Guardar y siguiente';
       revisar();
     }
   });
@@ -176,32 +177,28 @@ function verInicio() {
   if (!a || !a.cantidad) {
     h += `<div class="tarjeta"><h2>Rendición N° ${estado.proximo_numero}</h2>
       <p class="ayuda">Todavía no hay nada cargado. Cuando vengan a cobrar, usá <b>Atender</b>: nombre, monto y firma. Las transferencias van por <b>Transferir</b>.</p>
-      <button class="principal" onclick="irA('atender')">✍️ Atender reintegro</button></div>`;
+      <button class="principal" onclick="irA('atender')"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM13 7l4 4"/></svg> Atender reintegro</button></div>`;
     app.innerHTML = h;
     return;
   }
   const pend = a.recibos.filter((x) => !x.detallado);
   const listos = a.recibos.filter((x) => x.detallado);
-  h += `<div class="kpi">
-      <div><div class="v">${pesos(a.total)}</div><div class="l">Total rendición N° ${a.numero}</div></div>
-      <div><div class="v">${a.cantidad}</div><div class="l">recibo${a.cantidad === 1 ? '' : 's'}${a.sin_detallar ? ` · <b>${a.sin_detallar} sin detallar</b>` : ' · todos detallados'}</div></div>
-    </div>`;
+  h += `<div class="hero"><div class="eti">Rendición N° ${a.numero} · desde el ${fechaLinda(a.fecha_apertura)}</div><div class="total">${pesos(a.total)}</div>
+    <div class="hoy ${pend.length ? 'pend' : ''}"><div class="n">${pend.length ? pend.length : ICO.ok}</div><div class="t"><b>${pend.length ? `recibo${pend.length === 1 ? '' : 's'} sin detallar` : 'Todo detallado'}</b><span>${a.cantidad} recibo${a.cantidad === 1 ? '' : 's'} en total${pend.length ? ' · tocá uno para cargarle los tickets' : ' · ya se puede cerrar'}</span></div></div></div>`;
   const areas = Object.keys(a.por_area).sort();
-  if (areas.length) h += `<div class="areas">${areas.map((x) => `<span class="chip">${esc(x)}: ${pesos(a.por_area[x])}</span>`).join('')}</div>`;
-  if (pend.length) {
-    h += `<div class="tarjeta"><h3>⏳ Para detallar (${pend.length})</h3><p class="ayuda">Tocá cada uno, sacale foto a sus tickets y asignale las áreas.</p>` + pend.map(filaRecibo).join('') + `</div>`;
-  }
-  if (listos.length) h += `<div class="tarjeta"><h3>✅ Detallados (${listos.length})</h3>` + listos.map(filaRecibo).join('') + `</div>`;
+  if (areas.length) h += `<div class="areas">${areas.map((x) => `<span class="chip">${esc(x)} <b>${pesos(a.por_area[x])}</b></span>`).join('')}</div>`;
+  if (pend.length) h += `<div class="seccion-t">Para detallar · ${pend.length}</div><div class="lista">` + pend.map(filaRecibo).join('') + `</div>`;
+  if (listos.length) h += `<div class="seccion-t">Detallados · ${listos.length}</div><div class="lista">` + listos.map(filaRecibo).join('') + `</div>`;
   h += `<div class="tarjeta"><h3>Cerrar y armar el PDF</h3>
     <p class="ayuda">${pend.length ? `Faltan detallar ${pend.length} recibo${pend.length === 1 ? '' : 's'}. Hasta que estén todos no se puede cerrar.` : 'Se genera el PDF con el resumen por área, el detalle, los recibos firmados y las capturas. Después no se puede cambiar nada.'}</p>
-    <button class="principal" id="btn-cerrar" ${pend.length ? 'disabled' : ''}>🔒 Cerrar rendición N° ${a.numero}</button></div>`;
+    <button class="principal" id="btn-cerrar" ${pend.length ? 'disabled' : ''}>${ICO.lock} Cerrar rendición N° ${a.numero}</button></div>`;
   app.innerHTML = h;
   if (!pend.length) $('#btn-cerrar').addEventListener('click', confirmarCierre);
   app.querySelectorAll('.gasto').forEach((el) => el.addEventListener('click', () => verRecibo(el.dataset.id)));
 }
 
 function filaRecibo(x) {
-  const ico = x.tipo === 'ticket' ? (x.detallado ? '🧾' : '⏳') : '💸';
+  const ico = x.tipo === 'ticket' ? (x.detallado ? ICO.recibo : ICO.clock) : ICO.transf;
   const sub = x.detallado
     ? x.lineas.map((l) => esc(l.area)).filter((v, i, a) => a.indexOf(v) === i).join(', ') + ` · ${x.lineas.length} gasto${x.lineas.length === 1 ? '' : 's'}`
     : (x.fotos ? `${x.fotos} foto${x.fotos === 1 ? '' : 's'} · falta detallar` : 'sin foto · falta detallar');
@@ -219,12 +216,12 @@ function verRecibo(id) {
   if (!x) return;
   if (x.tipo === 'ticket' && !x.detallado) return detallar(x);
   app.innerHTML = `<div class="tarjeta">
-    <h2>${x.tipo === 'ticket' ? '🧾 ' + esc(x.persona) : '💸 Transferencia'} · ${pesos(x.total)}</h2>
-    <p class="ayuda">${fechaLinda(x.fecha)}${x.persona_dni ? ' · DNI ' + esc(x.persona_dni) : ''}${x.tiene_firma ? ' · ✍️ firmado' : ''}</p>
+    <h2>${x.tipo === 'ticket' ? esc(x.persona) : 'Transferencia'} · ${pesos(x.total)}</h2>
+    <p class="ayuda">${fechaLinda(x.fecha)}${x.persona_dni ? ' · DNI ' + esc(x.persona_dni) : ''}${x.tiene_firma ? ' · firmado' : ''}</p>
     ${x.lineas.map((l) => `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div>
       <div class="ayuda" style="margin:0 0 .4rem">${fechaLinda(l.fecha)} · ${esc(l.concepto)}</div>
       <div class="opciones" data-linea="${l.id}">${estado.areas.map((a) => `<button type="button" class="${a === l.area ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div></div>`).join('')}
-    ${x.tipo === 'ticket' ? `<button class="secundaria" id="r-redetallar">✏️ Volver a detallar (foto y líneas)</button>` : ''}
+    ${x.tipo === 'ticket' ? `<button class="secundaria" id="r-redetallar">${ICO.edit} Volver a detallar (foto y líneas)</button>` : ''}
     <div class="fila-botones"><button class="secundaria" id="r-volver">Volver</button><button class="secundaria peligro" id="r-anular">Anular recibo</button></div>
   </div>`;
   app.querySelectorAll('[data-linea] button').forEach((b) => b.addEventListener('click', async () => {
@@ -233,7 +230,7 @@ function verRecibo(id) {
       await API.llamar('editar_linea', { id: lid, area: b.dataset.a });
       b.parentElement.querySelectorAll('button').forEach((o) => o.classList.toggle('elegido', o === b));
       await cargarEstado();
-      toast('✅ Área cambiada');
+      toast('Área cambiada');
     } catch (e) { toast(e.message, true); }
   }));
   $('#r-volver').addEventListener('click', verInicio);
@@ -262,10 +259,10 @@ function pasoFotoDetalle() {
   app.innerHTML = `<div class="tarjeta">${barraPasos(1, 3)}
     <h2>Tickets de ${esc(x.persona)}</h2>
     <p class="ayuda">Recibo por <b>${pesos(x.total)}</b>. Poné todos sus tickets en una foto (planos, sin taparse, buena luz). Claude lee cada uno por separado. Si no entran, sacá otra.</p>
-    <label class="foto-caja" for="d-cam">📷 Sacar foto</label><input id="d-cam" type="file" accept="image/*" capture="environment">
+    <label class="foto-caja" for="d-cam">${ICO.cam} Sacar foto</label><input id="d-cam" type="file" accept="image/*" capture="environment">
     <div style="height:.6rem"></div>
-    <label class="foto-caja" for="d-gal">🖼️ Elegir de la galería</label><input id="d-gal" type="file" accept="image/*">
-    <button class="secundaria" style="margin-top:.9rem" id="d-mano">✏️ Cargar a mano, sin foto</button>
+    <label class="foto-caja" for="d-gal">${ICO.gal} Elegir de la galería</label><input id="d-gal" type="file" accept="image/*">
+    <button class="secundaria" style="margin-top:.9rem" id="d-mano">${ICO.edit} Cargar a mano, sin foto</button>
     <button class="secundaria" style="margin-top:.6rem" id="d-volver">Volver</button></div>`;
   $('#d-volver').addEventListener('click', () => borrador.lineas.length ? pasoLineas() : verInicio());
   $('#d-mano').addEventListener('click', () => { if (!borrador.lineas.length) borrador.lineas.push({ ...lineaVacia(), monto: x.total }); pasoLineas(); });
@@ -337,7 +334,7 @@ function pasoLineas() {
   let h = `<div class="tarjeta">${barraPasos(2, 3)}
     <h2>Tickets de ${esc(x.persona)}</h2>
     <div class="kpi"><div><div class="v">${pesos(x.total)}</div><div class="l">Recibo firmado</div></div>
-      <div class="${cuadra ? 'cuadra' : 'no-cuadra'}"><div class="v" id="l-suma">${pesos(suma)}</div><div class="l" id="l-dif">${cuadra ? '✅ cuadra' : (dif > 0 ? 'sobran ' : 'faltan ') + pesos(Math.abs(dif))}</div></div></div>
+      <div class="${cuadra ? 'cuadra' : 'no-cuadra'}"><div class="v" id="l-suma">${pesos(suma)}</div><div class="l" id="l-dif">${cuadra ? 'Cuadra' : (dif > 0 ? 'sobran ' : 'faltan ') + pesos(Math.abs(dif))}</div></div></div>
     <p class="ayuda">Una línea por ticket. Corregí montos, sacá lo que sobre o agregá lo que falte hasta que cuadre con el recibo.</p>`;
   L.forEach((l, i) => {
     const dudoso = !l.confianza || l.confianza !== 'alta' || !l.monto;
@@ -348,7 +345,7 @@ function pasoLineas() {
       <label>Comercio</label><input data-i="${i}" data-k="comercio" value="${esc(l.comercio)}" placeholder="Ej: Ferretería López">
       <label>Concepto</label><input data-i="${i}" data-k="concepto" value="${esc(l.concepto)}" placeholder="Ej: tornillos y discos de corte"></div>`;
   });
-  h += `<div class="fila-botones"><button class="secundaria" id="l-foto">📷 Otra foto</button><button class="secundaria" id="l-agregar">➕ Agregar a mano</button></div>
+  h += `<div class="fila-botones"><button class="secundaria" id="l-foto">${ICO.cam} Otra foto</button><button class="secundaria" id="l-agregar">${ICO.plus} Agregar a mano</button></div>
     <button class="principal" style="margin-top:.8rem" id="l-seguir">Siguiente: áreas</button>
     <button class="secundaria" style="margin-top:.6rem" id="l-volver">Volver a la rendición</button></div>`;
   app.innerHTML = h;
@@ -356,7 +353,7 @@ function pasoLineas() {
     leerFormularioLineas();
     const s = sumaLineas(), d = Math.round((s - x.total) * 100) / 100, ok = Math.abs(d) < 0.01;
     $('#l-suma').textContent = pesos(s);
-    $('#l-dif').textContent = ok ? '✅ cuadra' : (d > 0 ? 'sobran ' : 'faltan ') + pesos(Math.abs(d));
+    $('#l-dif').textContent = ok ? 'Cuadra' : (d > 0 ? 'sobran ' : 'faltan ') + pesos(Math.abs(d));
     $('#l-suma').parentElement.className = ok ? 'cuadra' : 'no-cuadra';
   };
   app.querySelectorAll('[data-k="monto"]').forEach((inp) => inp.addEventListener('input', refrescarSuma));
@@ -386,7 +383,7 @@ function pasoAreas() {
   });
   const suma = sumaLineas(), dif = Math.round((suma - x.total) * 100) / 100;
   if (Math.abs(dif) >= 0.01) h += `<div class="aviso">⚠️ Los tickets suman ${pesos(suma)} y el recibo es por ${pesos(x.total)} (${dif > 0 ? 'sobran' : 'faltan'} ${pesos(Math.abs(dif))}). Podés guardar igual: queda registrada la diferencia.</div>`;
-  h += `<button class="principal" id="a-guardar">💾 Guardar detalle</button>
+  h += `<button class="principal" id="a-guardar">${ICO.save} Guardar detalle</button>
     <button class="secundaria" style="margin-top:.6rem" id="a-volver">Volver</button></div>`;
   app.innerHTML = h;
   const refrescar = () => {
@@ -407,9 +404,9 @@ function pasoAreas() {
       }
       await API.llamar('detallar', { id: x.id, forzar: Math.abs(dif) >= 0.01, lineas: L.map((l) => ({ fecha: l.fecha, monto: l.monto, comercio: l.comercio, concepto: l.concepto, area: l.area })) });
       await cargarEstado();
-      toast(`✅ ${x.persona} detallado`);
+      toast(`${x.persona} detallado`);
       verInicio();
-    } catch (e) { toast(e.message, true); $('#a-guardar').disabled = false; $('#a-guardar').textContent = '💾 Guardar detalle'; }
+    } catch (e) { toast(e.message, true); $('#a-guardar').disabled = false; $('#a-guardar').innerHTML = ICO.save + ' Guardar detalle'; }
   });
 }
 
@@ -419,9 +416,9 @@ function verTransferir() {
   borrador = { imagenes: [], lineas: [] };
   app.innerHTML = `<div class="tarjeta">${barraPasos(1, 3)}<h2>Transferencia</h2>
     <p class="ayuda">Elegí la captura de la galería o sacale foto a la pantalla. Claude lee monto, fecha y destinatario.</p>
-    <label class="foto-caja" for="t-gal">🖼️ Elegir de la galería</label><input id="t-gal" type="file" accept="image/*">
+    <label class="foto-caja" for="t-gal">${ICO.gal} Elegir de la galería</label><input id="t-gal" type="file" accept="image/*">
     <div style="height:.6rem"></div>
-    <label class="foto-caja" for="t-cam">📷 Sacar foto</label><input id="t-cam" type="file" accept="image/*" capture="environment"></div>`;
+    <label class="foto-caja" for="t-cam">${ICO.cam} Sacar foto</label><input id="t-cam" type="file" accept="image/*" capture="environment"></div>`;
   ['#t-gal', '#t-cam'].forEach((s) => $(s).addEventListener('change', async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -443,7 +440,7 @@ function verTransferir() {
 function pasoTransfConfirmar() {
   const L = borrador.lineas;
   let h = `<div class="tarjeta">${barraPasos(2, 3)}<h2>Revisá la transferencia</h2>
-    <div style="display:flex;gap:.4rem;overflow-x:auto;margin-bottom:.8rem">${borrador.imagenes.map((im) => `<img src="${im}" style="height:5rem;border-radius:.5rem">`).join('')}</div>`;
+    <div class="miniaturas">${borrador.imagenes.map((im) => `<img src="${im}">`).join('')}</div>`;
   L.forEach((l, i) => {
     h += `<div class="linea-gasto">${L.length > 1 ? `<div class="linea-cab"><b>Transferencia ${i + 1}</b><button type="button" class="quitar" data-quitar="${i}">✕ Sacar</button></div>` : ''}
       ${l.confianza && l.observacion ? `<div class="aviso">⚠️ ${esc(l.observacion)}</div>` : ''}
@@ -474,7 +471,7 @@ function pasoTransfArea() {
   const botones = (sel) => estado.areas.map((a) => `<button type="button" class="${a === sel ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('');
   app.innerHTML = `<div class="tarjeta">${barraPasos(3, 3)}<h2>¿A qué área corresponde?</h2>` +
     L.map((l, i) => `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div><div class="opciones" data-linea="${i}">${botones(l.area)}</div></div>`).join('') +
-    `<button class="principal" id="t-guardar" disabled>💾 Guardar transferencia</button><button class="secundaria" style="margin-top:.6rem" id="t-volver">Volver</button></div>`;
+    `<button class="principal" id="t-guardar" disabled>${ICO.save} Guardar transferencia</button><button class="secundaria" style="margin-top:.6rem" id="t-volver">Volver</button></div>`;
   const refrescar = () => { L.forEach((l, i) => app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.classList.toggle('elegido', b.dataset.a === l.area))); $('#t-guardar').disabled = L.some((l) => !l.area); };
   refrescar();
   L.forEach((l, i) => app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.addEventListener('click', () => { l.area = b.dataset.a; refrescar(); })));
@@ -484,7 +481,7 @@ function pasoTransfArea() {
     try {
       const r = await API.llamar('transferencia', { op_id: crypto.randomUUID(), imagenes: borrador.imagenes, lineas: L.map((l) => ({ fecha: l.fecha, monto: l.monto, comercio: l.comercio, concepto: l.concepto, area: l.area })) });
       await cargarEstado();
-      toast(`✅ Transferencia guardada · ${pesos(r.recibo.total)}`);
+      toast(`Transferencia guardada · ${pesos(r.recibo.total)}`);
       verInicio();
     } catch (e) { toast(e.message, true); $('#t-guardar').disabled = false; }
   });
@@ -499,9 +496,9 @@ async function confirmarCierre() {
   try {
     const r = await API.llamar('cerrar_rendicion', { op_id: crypto.randomUUID() });
     await cargarEstado();
-    app.innerHTML = `<div class="tarjeta"><div class="aviso ok">✅ Rendición N° ${a.numero} cerrada.</div>
+    app.innerHTML = `<div class="tarjeta"><div class="aviso ok">Rendición N° ${a.numero} cerrada.</div>
       <h3>Ahora:</h3><ol class="ayuda" style="padding-left:1.2rem"><li>Abrí el PDF e imprimilo.</li><li>Abrochá los tickets físicos de la semana.</li><li>Entregalo a Contabilidad.</li></ol>
-      <a href="${esc(r.pdf_url)}" target="_blank" rel="noopener"><button class="principal">📄 Abrir el PDF</button></a>
+      <a href="${esc(r.pdf_url)}" target="_blank" rel="noopener"><button class="principal">${ICO.pdf} Abrir el PDF</button></a>
       <button class="secundaria" style="margin-top:.6rem" onclick="irA('inicio')">Empezar la próxima rendición</button></div>`;
   } catch (e) { toast(e.message, true); verInicio(); }
 }
@@ -511,9 +508,9 @@ async function confirmarCierre() {
 function verHistorial() {
   const c = estado.cerradas || [];
   if (!c.length) { app.innerHTML = `<div class="tarjeta"><h2>Rendiciones anteriores</h2><p class="ayuda">Todavía no cerraste ninguna.</p></div>`; return; }
-  app.innerHTML = `<div class="tarjeta"><h2>Rendiciones anteriores</h2>` + c.map((r) =>
+  app.innerHTML = `<div class="seccion-t">Rendiciones anteriores</div><div class="lista">` + c.map((r) =>
     `<div class="historial-item"><div><b>N° ${r.numero}</b> · ${fechaLinda(r.fecha_cierre)}<div class="ayuda" style="margin:0">${r.cantidad} recibos · ${pesos(r.total)}</div></div>
-     ${r.pdf_url ? `<a href="${esc(r.pdf_url)}" target="_blank" rel="noopener">📄 PDF</a>` : ''}</div>`).join('') + `</div>`;
+     ${r.pdf_url ? `<a href="${esc(r.pdf_url)}" target="_blank" rel="noopener">${ICO.pdf} PDF</a>` : ''}</div>`).join('') + `</div>`;
 }
 
 // ---------- arranque ----------

@@ -4,17 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cómo se usa — Rendiciones</title>
-  <link rel="stylesheet" href="estilo.css?v=2">
+  <link rel="stylesheet" href="estilo.css?v=4">
 </head>
-<body>
-  <header><div><div class="titulo">Cómo se usa</div><div class="sub">Rendición de gastos</div></div><a class="boton-ayuda" href="index.html" title="Volver">←</a></header>
+<body class="sin-nav">
+  <header class="barra">
+    <a class="icono" href="index.html" aria-label="Volver"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div class="barra-t"><h2>Cómo se usa</h2><div class="sub-barra">Rendición de gastos</div></div>
+  </header>
   <main>
     <div class="tarjeta">
       <h2>La idea en una línea</h2>
       <p class="ayuda">Cuando vienen a cobrar: <b>Atender</b> (nombre, monto, firma; 20 segundos). Después, tranquilo: <b>Detallar</b> cada recibo con la foto de sus tickets. El viernes: <b>Cerrar</b>, imprimir el PDF, abrochar los tickets y entregar a Contabilidad. Los recibos de papel ya no hacen falta.</p>
     </div>
     <div class="tarjeta">
-      <h2>✍️ Atender (con la persona adelante)</h2>
+      <h2>Atender (con la persona adelante)</h2>
       <ol class="ayuda" style="padding-left:1.2rem">
         <li>Escribí el nombre (se autocompleta) y el monto que le entregás.</li>
         <li>Dale el celular: lee el recibo y firma con el dedo.</li>
@@ -23,20 +26,20 @@
       </ol>
     </div>
     <div class="tarjeta">
-      <h2>🧾 Detallar (después, sin apuro)</h2>
+      <h2>Detallar (después, sin apuro)</h2>
       <ol class="ayuda" style="padding-left:1.2rem">
-        <li>En <b>Rendición</b> tocá un recibo marcado ⏳.</li>
+        <li>En <b>Rendición</b> tocá un recibo marcado como pendiente.</li>
         <li>Sacale una foto a todos sus tickets juntos (planos, sin taparse). Claude lee cada uno.</li>
         <li>Revisá que la suma <b>cuadre</b> con el recibo firmado; corregí, sacá o agregá líneas.</li>
         <li>Elegí el área de cada ticket (o una para todos) y guardá.</li>
       </ol>
     </div>
     <div class="tarjeta">
-      <h2>💸 Transferir</h2>
+      <h2>Transferir</h2>
       <p class="ayuda">Elegí la captura, revisá monto, fecha y destinatario, elegí el área. Un solo paso, sin recibo.</p>
     </div>
     <div class="tarjeta">
-      <h2>🔒 El viernes</h2>
+      <h2>El viernes</h2>
       <p class="ayuda"><b>Cerrar rendición</b> se habilita cuando no queda ningún recibo sin detallar. Genera el PDF (resumen por área, detalle, recibos firmados en Anexo A, capturas en Anexo B). Imprimilo, abrochá los tickets y entregalo. Una rendición cerrada no se toca; lo que llegue después va a la siguiente.</p>
     </div>
     <div class="tarjeta">
@@ -44,6 +47,6 @@
       <p class="ayuda">Si Claude no lee bien una foto, corregí a mano. Si un recibo quedó mal, tocalo y <b>Anular</b>. Las áreas se editan en la planilla (hoja AREAS).</p>
     </div>
   </main>
-  <footer><img src="logos/ingeco.png" alt="INGECO" onerror="this.style.display='none'"></footer>
+  
 </body>
 </html>
