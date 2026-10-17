@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icono.svg">
   <link rel="apple-touch-icon" href="icono.svg">
-  <link rel="stylesheet" href="estilo.css?v=2">
+  <link rel="stylesheet" href="estilo.css?v=3">
   <script src="https://marcoskatz-cmd.github.io/app-ingeco/guard.js" data-modulo="RENDICIONES"></script>
   <script>
     // URL del web app de Apps Script (deploymentId estable). Se reemplaza al desplegar.
@@ -29,8 +29,9 @@
   </main>
 
   <nav class="barra">
-    <button data-vista="inicio" class="activo"><span class="ico">📋</span>Rendición</button>
-    <button data-vista="nuevo" id="btn-nuevo"><span class="ico">➕</span>Nuevo gasto</button>
+    <button data-vista="atender" class="activo"><span class="ico">✍️</span>Atender</button>
+    <button data-vista="inicio"><span class="ico">📋</span>Rendición<span class="badge" id="badge-detallar" hidden></span></button>
+    <button data-vista="transferir"><span class="ico">💸</span>Transferir</button>
     <button data-vista="historial"><span class="ico">🗂️</span>Anteriores</button>
   </nav>
 
@@ -40,8 +41,8 @@
     <img src="logos/ingeco.png" alt="INGECO" onerror="this.style.display='none'">
   </footer>
 
-  <script src="api.js?v=2"></script>
-  <script src="app.js?v=2"></script>
+  <script src="api.js?v=3"></script>
+  <script src="app.js?v=3"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   </script>

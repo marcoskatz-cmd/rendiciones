@@ -137,7 +137,7 @@ canvas.firma { width: 100%; height: 11rem; border: 2px solid var(--borde); borde
 /* barra inferior */
 .barra {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
   background: var(--tarjeta); border-top: 1px solid var(--borde);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -164,3 +164,14 @@ footer img { height: 28px; background: var(--azul); padding: 4px 10px; border-ra
 .linea-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
 .linea-cab .quitar { background: none; border: 1px solid var(--grave); color: var(--grave); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.85rem; }
 .gasto .n { font-size: 1.2rem; }
+
+/* ---- flujo atender / detallar ---- */
+.barra button { position: relative; }
+.badge { position: absolute; top: .2rem; right: 18%; background: var(--alerta); color: #fff; border-radius: 1rem; padding: 0 .4rem; font-size: .7rem; line-height: 1.2rem; }
+.boton-foto { display: flex; align-items: center; justify-content: center; gap: .3rem; text-align: center; cursor: pointer; }
+.gasto.pendiente .n { background: var(--alerta-suave); color: var(--alerta); }
+.kpi .cuadra .v { color: var(--acento); }
+.kpi .no-cuadra { border-color: var(--alerta); background: var(--alerta-suave); }
+.kpi .no-cuadra .v, .kpi .no-cuadra .l { color: var(--alerta); }
+.dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.atender input.monto { font-size: 1.9rem; }

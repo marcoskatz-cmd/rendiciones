@@ -70,9 +70,13 @@ function exigirBootstrap_(p) {
 var RUTAS = {
   estado: estado_,
   leer_comprobante: leer_comprobante_,
-  guardar_gasto: guardar_gasto_,
-  editar_gasto: editar_gasto_,
-  anular_gasto: anular_gasto_,
+  atender: atender_,
+  agregar_fotos: agregar_fotos_,
+  leer_fotos_recibo: leer_fotos_recibo_,
+  detallar: detallar_,
+  transferencia: transferencia_,
+  editar_linea: editar_linea_,
+  anular_recibo: anular_recibo_,
   cerrar_rendicion: cerrar_rendicion_,
   ver_rendicion: ver_rendicion_
 };

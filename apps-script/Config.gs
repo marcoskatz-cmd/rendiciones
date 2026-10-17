@@ -4,9 +4,11 @@
  *
  * Qué es: Agustín reintegra gastos a los obreros (tickets) y hace transferencias.
  * Todos los viernes arma la rendición y la entrega a Contabilidad. Esta app:
- *   - lee la foto del comprobante con Claude y propone monto/comercio/fecha,
- *   - genera el recibo digital que el obrero firma en el celular,
- *   - arma el PDF final (resumen por área + recibos firmados + capturas).
+ *   - ATENDER (en el mostrador, segundos): nombre + monto + firma → recibo digital.
+ *     Opcional: foto de los tickets de esa persona en el momento.
+ *   - DETALLAR (después, tranquilo): foto de los tickets → Claude propone una
+ *     línea por ticket → Agustín confirma que suma el total y asigna el área.
+ *   - CERRAR: PDF (resumen por área + detalle + recibos firmados + capturas).
  *
  * La política editable (áreas, personas) vive en la planilla, no acá.
  */
@@ -35,12 +37,17 @@ var ESTADOS_RENDICION = ['abierta', 'cerrada'];
 var HOJAS = {
   RENDICIONES: [
     'id', 'numero', 'estado', 'fecha_apertura', 'fecha_cierre',
-    'cantidad_gastos', 'total', 'pdf_url', 'pdf_id', 'op_id'
+    'cantidad_recibos', 'total', 'pdf_url', 'pdf_id', 'op_id'
+  ],
+  // Un recibo = una persona que cobró (firma) o una transferencia. El detalle
+  // (qué tickets, qué área) se carga después, en GASTOS, una fila por ticket.
+  RECIBOS: [
+    'id', 'rendicion_id', 'numero', 'tipo', 'fecha', 'persona', 'persona_dni',
+    'total', 'firma', 'fotos', 'detallado', 'ts', 'anulado', 'op_id'
   ],
   GASTOS: [
-    'id', 'rendicion_id', 'numero', 'recibo_id', 'tipo', 'fecha', 'monto', 'comercio',
-    'concepto', 'area', 'persona', 'persona_dni', 'detalle_claude',
-    'fotos', 'firma', 'ts', 'anulado', 'op_id'
+    'id', 'recibo_id', 'rendicion_id', 'fecha', 'monto', 'comercio',
+    'concepto', 'area', 'ts'
   ],
   AREAS: ['area', 'activo'],
   PERSONAS: ['nombre', 'dni', 'activo'],

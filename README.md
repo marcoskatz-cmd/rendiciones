@@ -11,19 +11,20 @@ se genera el PDF que imprime y entrega a Contabilidad junto con los tickets fís
 
 ## Flujo
 
-1. **Nuevo gasto → Tickets**: una o más fotos (varios tickets por foto) → Claude devuelve
-   una línea por comprobante → Agustín corrige/saca/agrega → área por línea → nombre de
-   quien cobra + firma en canvas de UN recibo por el total → una fila de GASTOS por línea,
-   todas con el mismo `recibo_id`. Los tickets físicos no se numeran: van abrochados al PDF.
-2. **Nuevo gasto → Transferencia**: captura → Claude → área → se guarda. Sin recibo.
-3. **Cerrar rendición**: PDF en Drive (carátula con total por área, detalle, Anexo A recibos
-   firmados, Anexo B capturas) + aviso a Contabilidad por app-ingeco.
+1. **Atender** (mostrador, segundos): nombre + monto + firma en canvas → fila en `RECIBOS`
+   (tipo ticket, `detallado` vacío). Foto de los tickets opcional en ese momento.
+2. **Detallar** (después): foto(s) de los tickets del recibo → Claude devuelve una línea por
+   ticket → Agustín ajusta hasta que la suma cuadre con el total firmado (o fuerza la
+   diferencia, queda en LOG) → área por línea → filas en `GASTOS` con `recibo_id`.
+3. **Transferir**: captura → Claude → área. Recibo tipo transferencia ya detallado.
+4. **Cerrar**: solo con todos los recibos detallados. PDF en Drive (carátula por área,
+   detalle, Anexo A recibos firmados con sus tickets, Anexo B capturas) + aviso app-ingeco.
 
-Hay una sola rendición abierta a la vez; la siguiente se abre sola con el primer gasto.
+Hay una sola rendición abierta a la vez; la siguiente se abre sola con el primer recibo.
 
 ## Datos
 
-Planilla `RENDICIONES — Base de datos`: hojas `RENDICIONES`, `GASTOS`, `AREAS`, `PERSONAS`, `LOG`.
+Planilla `RENDICIONES — Base de datos`: hojas `RENDICIONES`, `RECIBOS`, `GASTOS`, `AREAS`, `PERSONAS`, `LOG`.
 Carpeta Drive `RENDICIONES — Comprobantes y PDF`, una subcarpeta por rendición.
 Áreas y personas se editan en la planilla (columna `activo` = SI). Las personas se aprenden
 solas de los recibos.
