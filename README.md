@@ -11,9 +11,10 @@ se genera el PDF que imprime y entrega a Contabilidad junto con los tickets fís
 
 ## Flujo
 
-1. **Nuevo gasto → Ticket**: foto → Claude propone monto/fecha/comercio/concepto → área →
-   nombre de quien cobra + firma en canvas → se guarda. La app muestra el N° para escribir
-   en el ticket de papel.
+1. **Nuevo gasto → Tickets**: una o más fotos (varios tickets por foto) → Claude devuelve
+   una línea por comprobante → Agustín corrige/saca/agrega → área por línea → nombre de
+   quien cobra + firma en canvas de UN recibo por el total → una fila de GASTOS por línea,
+   todas con el mismo `recibo_id`. Los tickets físicos no se numeran: van abrochados al PDF.
 2. **Nuevo gasto → Transferencia**: captura → Claude → área → se guarda. Sin recibo.
 3. **Cerrar rendición**: PDF en Drive (carátula con total por área, detalle, Anexo A recibos
    firmados, Anexo B capturas) + aviso a Contabilidad por app-ingeco.
@@ -30,7 +31,7 @@ solas de los recibos.
 ## Claude
 
 `Claude.gs` llama a `https://api.anthropic.com/v1/messages` con `claude-opus-5-5`, salida JSON
-estricta (`output_config.format`) y `effort: low`. La clave vive en Script Properties
+estricta (`output_config.format`, lista `comprobantes[]`) y `effort: low`. La clave vive en Script Properties
 (`ANTHROPIC_API_KEY`), nunca en el front.
 
 ## Instalación por única vez
