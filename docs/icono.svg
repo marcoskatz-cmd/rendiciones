@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#0f766e"/>
+  <!-- recibo con borde dentado -->
+  <path d="M72 44h112v160l-14-10-14 10-14-10-14 10-14-10-14 10-14-10-14 10z" fill="#fff"/>
+  <rect x="92" y="72" width="72" height="10" rx="5" fill="#0f766e" opacity=".55"/>
+  <rect x="92" y="96" width="72" height="10" rx="5" fill="#0f766e" opacity=".55"/>
+  <rect x="92" y="120" width="44" height="10" rx="5" fill="#0f766e" opacity=".55"/>
+  <!-- firma -->
+  <path d="M90 168c12-22 20-22 26-4s14 14 22-6 16-18 26 2" fill="none" stroke="#b45309" stroke-width="7" stroke-linecap="round"/>
+</svg>

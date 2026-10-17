@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rendiciones — INGECO</title>
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icono.svg">
+  <link rel="apple-touch-icon" href="icono.svg">
+  <link rel="stylesheet" href="estilo.css?v=1">
+  <script src="https://marcoskatz-cmd.github.io/app-ingeco/guard.js" data-modulo="RENDICIONES"></script>
+  <script>
+    // URL del web app de Apps Script (deploymentId estable). Se reemplaza al desplegar.
+    window.RENDICIONES_API_URL = 'https://script.google.com/macros/s/__DEPLOYMENT_ID__/exec';
+  </script>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="titulo">Rendición de gastos</div>
+      <div class="sub" id="cab-sub">Cargando…</div>
+    </div>
+    <a class="boton-ayuda" href="ayuda.html" title="Cómo se usa">?</a>
+  </header>
+
+  <main id="app">
+    <div class="tarjeta"><p class="ayuda">Conectando con el servidor…</p></div>
+  </main>
+
+  <nav class="barra">
+    <button data-vista="inicio" class="activo"><span class="ico">📋</span>Rendición</button>
+    <button data-vista="nuevo" id="btn-nuevo"><span class="ico">➕</span>Nuevo gasto</button>
+    <button data-vista="historial"><span class="ico">🗂️</span>Anteriores</button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <footer>
+    <img src="logos/ingeco.png" alt="INGECO" onerror="this.style.display='none'">
+  </footer>
+
+  <script src="api.js?v=1"></script>
+  <script src="app.js?v=1"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  </script>
+</body>
+</html>
