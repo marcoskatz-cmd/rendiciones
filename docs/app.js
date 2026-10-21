@@ -52,14 +52,14 @@ async function cargarEstado() {
 }
 
 function irA(v) {
-  document.querySelectorAll('.barra button').forEach((b) => b.classList.toggle('activo', b.dataset.vista === v));
+  document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('activo', b.dataset.vista === v));
   window.scrollTo(0, 0);
   if (v === 'atender') verAtender();
   if (v === 'inicio') verInicio();
   if (v === 'transferir') verTransferir();
   if (v === 'historial') verHistorial();
 }
-document.querySelectorAll('.barra button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
+document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
 
 function avisosDiagnostico() {
   const d = (estado && estado.diagnostico) || [];
@@ -377,7 +377,7 @@ function pasoAreas() {
   const x = borrador.recibo, L = borrador.lineas;
   const botones = (sel) => estado.areas.map((a) => `<button type="button" class="${a === sel ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('');
   let h = `<div class="tarjeta">${barraPasos(3, 3)}<h2>Áreas · ${esc(x.persona)}</h2>`;
-  if (L.length > 1) h += `<label>Todos los tickets</label><div class="opciones" id="a-todos">${botones(null)}</div><hr style="border:0;border-top:1px solid var(--borde);margin:.8rem 0">`;
+  if (L.length > 1) h += `<label>Todos los tickets</label><div class="opciones" id="a-todos">${botones(null)}</div><hr style="border:0;border-top:1px solid var(--linea);margin:.8rem 0">`;
   L.forEach((l, i) => {
     h += `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div><div class="opciones" data-linea="${i}">${botones(l.area)}</div></div>`;
   });

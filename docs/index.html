@@ -8,7 +8,11 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icono.svg">
   <link rel="apple-touch-icon" href="icono.svg">
-  <link rel="stylesheet" href="estilo.css?v=4">
+  <style>:root{--azul:#1e3a8a;--azul-claro:#2b4fb3;--azul-suave:#e6ecfb;--tinta:#0f1a3d;--teal:#0e8a7a;--teal-suave:#dcf1ee;--ambar:#d98f00;--ambar-suave:#fff1cf;--ambar-texto:#8a5a00;--alerta:#b8410e;--alerta-suave:#fbe6dc;--fondo:#f5f4f0;--fondo-2:#ebe9e3;--superficie:#fff;--texto:#171c2e;--texto-2:#5b6274;--texto-3:#8a90a0;--linea:#e2dfd7;--linea-fuerte:#c9c5bb;--radio:14px;--radio-s:10px;--barra-h:56px;--cuerpo:system-ui,sans-serif;--display:system-ui,sans-serif}[data-ig-volver]{display:none}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://marcoskatz-cmd.github.io/app-ingeco/ingeco.css">
+  <script src="https://marcoskatz-cmd.github.io/app-ingeco/ingeco.js" defer></script>
+  <link rel="stylesheet" href="estilo.css?v=5">
   <script src="https://marcoskatz-cmd.github.io/app-ingeco/guard.js" data-modulo="RENDICIONES"></script>
   <script>
     // URL del web app de Apps Script (deploymentId estable). Se reemplaza al desplegar.
@@ -17,7 +21,8 @@
 </head>
 <body>
   <header class="barra">
-    <img class="barra-logo" src="logos/ingeco-azul.png" alt="INGECO">
+    <button class="ig-volver" data-ig-volver aria-label="Volver a la App INGECO"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <img class="barra-logo" src="logos/ingeco-azul.png" alt="INGECO" data-ig-ocultar-en-app>
     <div class="barra-t"><h2>Rendición de gastos</h2><div class="sub-barra" id="cab-sub">Cargando…</div></div>
     <a class="icono" href="ayuda.html" aria-label="Cómo se usa" title="Cómo se usa"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg></a>
   </header>
@@ -36,8 +41,8 @@
   <div id="toast" class="toast" hidden></div>
 
   
-  <script src="api.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="api.js?v=5"></script>
+  <script src="app.js?v=5"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   </script>
