@@ -15,7 +15,7 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 // Estilo común de la App INGECO: red primero (siempre la última), caché solo sin señal.
-const COMUN = 'https://marcoskatz-cmd.github.io/app-ingeco/ingeco.';
+const COMUN = 'https://app.ingecosa.com.ar/ingeco.';
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method === 'GET' && e.request.url.startsWith(COMUN)) {
