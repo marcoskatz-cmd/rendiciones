@@ -91,7 +91,11 @@ function doPost(e) {
   var fn = RUTAS[p.action];
   if (!fn) return json_({ ok: false, error: 'Acción desconocida: ' + p.action });
   try {
-    return json_({ ok: true, data: fn(p) });
+    var data = fn(p);
+    // con_all (opcional): después de escribir, devuelve también el estado
+    // completo y la app se ahorra el segundo viaje (~3 s). Sin el flag, igual que antes.
+    if (p.con_all && p.action !== 'estado') return json_({ ok: true, data: data, all: estado_(p) });
+    return json_({ ok: true, data: data });
   } catch (err) {
     return json_({ ok: false, error: String(err.message || err) });
   }

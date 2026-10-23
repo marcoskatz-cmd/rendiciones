@@ -104,13 +104,21 @@ function normalizarFecha_(col, v) {
   return Utilities.formatDate(v, CFG.TZ, esTs ? 'yyyy-MM-dd HH:mm:ss' : 'yyyy-MM-dd');
 }
 
+// Memo por request: un mismo pedido lee la misma hoja varias veces (estado_
+// lee RENDICIONES, RECIBOS y GASTOS más de una vez). Se descarta al escribir.
+var MEMO_HOJAS_ = {};
+
 /** Todas las filas como objetos {columna: valor}, más _fila (1-based). */
 function leer_(nombre) {
-  var sh = hoja_(nombre);
-  var ultima = sh.getLastRow();
-  if (ultima < 2) return [];
   var cols = HOJAS[nombre];
-  var datos = sh.getRange(2, 1, ultima - 1, cols.length).getValues();
+  var datos = MEMO_HOJAS_[nombre];
+  if (!datos) {
+    var sh = hoja_(nombre);
+    var ultima = sh.getLastRow();
+    datos = ultima < 2 ? [] : sh.getRange(2, 1, ultima - 1, cols.length).getValues();
+    MEMO_HOJAS_[nombre] = datos;
+  }
+  if (!datos.length) return [];
   return datos.map(function (fila, i) {
     var o = { _fila: i + 2 };
     cols.forEach(function (c, j) { o[c] = normalizarFecha_(c, fila[j]); });
@@ -124,17 +132,29 @@ function agregar_(nombre, obj) {
     return obj[c] === undefined || obj[c] === null ? '' : obj[c];
   });
   sh.appendRow(fila);
+  delete MEMO_HOJAS_[nombre];
   return fila;
 }
 
 function actualizar_(nombre, numeroFila, cambios) {
   var sh = hoja_(nombre);
   var cols = HOJAS[nombre];
-  Object.keys(cambios).forEach(function (k) {
+  var idxs = Object.keys(cambios).map(function (k) {
     var idx = cols.indexOf(k);
     if (idx === -1) throw new Error('Columna desconocida "' + k + '" en ' + nombre);
-    sh.getRange(numeroFila, idx + 1).setValue(cambios[k]);
+    return idx;
   });
+  delete MEMO_HOJAS_[nombre];
+  if (!idxs.length) return;
+  // Una sola escritura para el tramo de columnas tocado (antes, un setValue por
+  // campo). Las celdas del medio se reescriben igual; si tienen fórmula, se respeta.
+  var desde = Math.min.apply(null, idxs), hasta = Math.max.apply(null, idxs);
+  var rango = sh.getRange(numeroFila, desde + 1, 1, hasta - desde + 1);
+  var valores = rango.getValues()[0];
+  var formulas = rango.getFormulas()[0];
+  var fila = valores.map(function (v, j) { return formulas[j] ? formulas[j] : v; });
+  Object.keys(cambios).forEach(function (k) { fila[cols.indexOf(k) - desde] = cambios[k]; });
+  rango.setValues([fila]);
 }
 
 function buscarPorId_(nombre, id) {

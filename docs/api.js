@@ -7,7 +7,8 @@
 const API_URL = window.RENDICIONES_API_URL;
 const SIN_SEÑAL = 'No hay conexión con el servidor. Revisá la señal y probá de nuevo.';
 
-async function llamar(action, datos = {}) {
+/** Respuesta entera ({data, all}): para pedir el estado de yapa con con_all. */
+async function llamarCompleto(action, datos = {}) {
   let r;
   try {
     r = await fetch(API_URL, {
@@ -22,7 +23,11 @@ async function llamar(action, datos = {}) {
   let j;
   try { j = await r.json(); } catch (e) { throw new Error(SIN_SEÑAL); }
   if (!j.ok) throw new Error(j.error || 'Ocurrió un error inesperado.');
-  return j.data;
+  return j;
 }
 
-window.API = { llamar, SIN_SEÑAL };
+async function llamar(action, datos = {}) {
+  return (await llamarCompleto(action, datos)).data;
+}
+
+window.API = { llamar, llamarCompleto, SIN_SEÑAL };

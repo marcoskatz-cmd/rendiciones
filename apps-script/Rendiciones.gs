@@ -249,6 +249,7 @@ function detallar_(p) {
   var sh = hoja_('GASTOS');
   lineasDe_(x.id).map(function (g) { return g._fila; }).sort(function (a, b) { return b - a; })
     .forEach(function (f) { sh.deleteRow(f); });
+  delete MEMO_HOJAS_['GASTOS'];
   lineas.forEach(function (l) {
     agregar_('GASTOS', {
       id: uuid_(), recibo_id: x.id, rendicion_id: x.rendicion_id,

@@ -41,8 +41,32 @@ function barraPasos(n, total) {
   return `<div class="pasos">${Array.from({ length: total }, (_, i) => `<span class="${i < n ? 'hecho' : ''}"></span>`).join('')}</div>`;
 }
 
+// El último estado queda guardado en el celular: la app abre con eso al toque
+// y lo refresca en segundo plano (cada llamada a Apps Script tarda ~3 s).
+const CLAVE_ESTADO = 'rendiciones:estado';
+let vistaActual = null;
+
+function estadoGuardado() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_ESTADO) || 'null'); } catch (e) { return null; }
+}
+
 async function cargarEstado() {
-  estado = await API.llamar('estado');
+  aplicarEstado(await API.llamar('estado'));
+}
+
+/**
+ * Escribe y trae el estado nuevo en el mismo viaje (con_all). Si el backend
+ * todavía no lo soporta, hace el segundo pedido como antes.
+ */
+async function escribir(action, datos) {
+  const r = await API.llamarCompleto(action, { ...datos, con_all: true });
+  if (r.all) aplicarEstado(r.all); else await cargarEstado();
+  return r.data;
+}
+
+function aplicarEstado(nuevo) {
+  estado = nuevo;
+  try { localStorage.setItem(CLAVE_ESTADO, JSON.stringify(nuevo)); } catch (e) { /* sin lugar: no pasa nada */ }
   const a = estado.abierta;
   $('#cab-sub').textContent = a
     ? `N° ${a.numero} · ${a.cantidad} recibo${a.cantidad === 1 ? '' : 's'} · ${pesos(a.total)}${a.sin_detallar ? ` · ${a.sin_detallar} sin detallar` : ''}`
@@ -52,6 +76,7 @@ async function cargarEstado() {
 }
 
 function irA(v) {
+  vistaActual = v;
   document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('activo', b.dataset.vista === v));
   window.scrollTo(0, 0);
   if (v === 'atender') verAtender();
@@ -155,8 +180,7 @@ function verAtender() {
     $('#at-guardar').disabled = true;
     $('#at-guardar').textContent = 'Guardando…';
     try {
-      const r = await API.llamar('atender', { op_id: crypto.randomUUID(), persona, persona_dni: p ? p.dni : '', total, firma: firma.dataUrl(), imagenes: fotos });
-      await cargarEstado();
+      const r = await escribir('atender', { op_id: crypto.randomUUID(), persona, persona_dni: p ? p.dni : '', total, firma: firma.dataUrl(), imagenes: fotos });
       toast(`${r.recibo.persona} · ${pesos(r.recibo.total)} · recibo guardado`);
       verAtender();
       setTimeout(() => $('#at-persona').focus(), 50);
@@ -212,6 +236,7 @@ function filaRecibo(x) {
 // ---------- RECIBO: ver / detallar ----------
 
 function verRecibo(id) {
+  vistaActual = 'recibo';  // el refresco de fondo no tiene que sacarlo de acá
   const x = estado.abierta.recibos.find((r) => r.id === id);
   if (!x) return;
   if (x.tipo === 'ticket' && !x.detallado) return detallar(x);
@@ -226,24 +251,31 @@ function verRecibo(id) {
   </div>`;
   app.querySelectorAll('[data-linea] button').forEach((b) => b.addEventListener('click', async () => {
     const lid = b.parentElement.dataset.linea;
+    // Optimista: se marca al toque y se guarda de fondo. Si falla, vuelve atrás.
+    const botones = b.parentElement.querySelectorAll('button');
+    const antes = [...botones].find((o) => o.classList.contains('elegido'));
+    botones.forEach((o) => o.classList.toggle('elegido', o === b));
     try {
-      await API.llamar('editar_linea', { id: lid, area: b.dataset.a });
-      b.parentElement.querySelectorAll('button').forEach((o) => o.classList.toggle('elegido', o === b));
-      await cargarEstado();
+      await escribir('editar_linea', { id: lid, area: b.dataset.a });
       toast('Área cambiada');
-    } catch (e) { toast(e.message, true); }
+    } catch (e) {
+      if (b.isConnected) botones.forEach((o) => o.classList.toggle('elegido', o === antes));
+      toast('No se pudo cambiar el área: ' + e.message, true);
+      cargarEstado().catch(() => {});
+    }
   }));
   $('#r-volver').addEventListener('click', verInicio);
   if ($('#r-redetallar')) $('#r-redetallar').addEventListener('click', () => detallar(x));
   $('#r-anular').addEventListener('click', async () => {
     if (!confirm(`¿Anular el recibo de ${x.persona || 'la transferencia'} por ${pesos(x.total)}? Sale de la rendición y del PDF.`)) return;
-    try { await API.llamar('anular_recibo', { id }); await cargarEstado(); toast('Recibo anulado'); verInicio(); }
+    try { await escribir('anular_recibo', { id }); toast('Recibo anulado'); verInicio(); }
     catch (e) { toast(e.message, true); }
   });
 }
 
 /** Detallar un recibo de tickets: fotos → Claude → líneas → áreas → guardar. */
 function detallar(x) {
+  vistaActual = 'detallar';
   borrador = { recibo: x, imagenesNuevas: [], lineas: x.lineas.map((l) => ({ ...l, confianza: 'alta', observacion: '' })), fotosSubidas: x.fotos };
   if (!borrador.fotosSubidas && !borrador.lineas.length) return pasoFotoDetalle();
   if (!borrador.lineas.length) return pasoLeerFotosSubidas();
@@ -402,8 +434,7 @@ function pasoAreas() {
         await API.llamar('agregar_fotos', { id: x.id, imagenes: borrador.imagenesNuevas });
         borrador.imagenesNuevas = [];
       }
-      await API.llamar('detallar', { id: x.id, forzar: Math.abs(dif) >= 0.01, lineas: L.map((l) => ({ fecha: l.fecha, monto: l.monto, comercio: l.comercio, concepto: l.concepto, area: l.area })) });
-      await cargarEstado();
+      await escribir('detallar', { id: x.id, forzar: Math.abs(dif) >= 0.01, lineas: L.map((l) => ({ fecha: l.fecha, monto: l.monto, comercio: l.comercio, concepto: l.concepto, area: l.area })) });
       toast(`${x.persona} detallado`);
       verInicio();
     } catch (e) { toast(e.message, true); $('#a-guardar').disabled = false; $('#a-guardar').innerHTML = ICO.save + ' Guardar detalle'; }
@@ -479,8 +510,7 @@ function pasoTransfArea() {
   $('#t-guardar').addEventListener('click', async () => {
     $('#t-guardar').disabled = true;
     try {
-      const r = await API.llamar('transferencia', { op_id: crypto.randomUUID(), imagenes: borrador.imagenes, lineas: L.map((l) => ({ fecha: l.fecha, monto: l.monto, comercio: l.comercio, concepto: l.concepto, area: l.area })) });
-      await cargarEstado();
+      const r = await escribir('transferencia', { op_id: crypto.randomUUID(), imagenes: borrador.imagenes, lineas: L.map((l) => ({ fecha: l.fecha, monto: l.monto, comercio: l.comercio, concepto: l.concepto, area: l.area })) });
       toast(`Transferencia guardada · ${pesos(r.recibo.total)}`);
       verInicio();
     } catch (e) { toast(e.message, true); $('#t-guardar').disabled = false; }
@@ -494,8 +524,7 @@ async function confirmarCierre() {
   if (!confirm(`Vas a cerrar la rendición N° ${a.numero}: ${a.cantidad} recibos por ${pesos(a.total)}.\n\nDespués no se puede cambiar nada. ¿Cerrar y generar el PDF?`)) return;
   app.innerHTML = `<div class="tarjeta"><div class="cargando">Armando el PDF con recibos y capturas… puede tardar un minuto.</div></div>`;
   try {
-    const r = await API.llamar('cerrar_rendicion', { op_id: crypto.randomUUID() });
-    await cargarEstado();
+    const r = await escribir('cerrar_rendicion', { op_id: crypto.randomUUID() });
     app.innerHTML = `<div class="tarjeta"><div class="aviso ok">Rendición N° ${a.numero} cerrada.</div>
       <h3>Ahora:</h3><ol class="ayuda" style="padding-left:1.2rem"><li>Abrí el PDF e imprimilo.</li><li>Abrochá los tickets físicos de la semana.</li><li>Entregalo a Contabilidad.</li></ol>
       <a href="${esc(r.pdf_url)}" target="_blank" rel="noopener"><button class="principal">${ICO.pdf} Abrir el PDF</button></a>
@@ -516,10 +545,21 @@ function verHistorial() {
 // ---------- arranque ----------
 
 (async () => {
-  try {
-    await cargarEstado();
+  // Primer pintado con lo guardado; después se refresca sin tapar la pantalla.
+  const guardado = estadoGuardado();
+  if (guardado) {
+    aplicarEstado(guardado);
     irA(estado.abierta && estado.abierta.cantidad ? 'inicio' : 'atender');
+  }
+  try {
+    const previo = JSON.stringify(estado);
+    await cargarEstado();
+    if (!guardado) return irA(estado.abierta && estado.abierta.cantidad ? 'inicio' : 'atender');
+    // Solo se repintan las vistas de lectura: en Cargar/Transferir puede haber
+    // un formulario a medio llenar (firma, fotos) que no hay que pisar.
+    if (JSON.stringify(estado) !== previo && (vistaActual === 'inicio' || vistaActual === 'historial')) irA(vistaActual);
   } catch (e) {
+    if (guardado) return toast('Sin conexión: se muestra lo último que se cargó.', true);
     app.innerHTML = `<div class="tarjeta"><div class="aviso grave">${esc(e.message)}</div><button class="secundaria" onclick="location.reload()">Reintentar</button></div>`;
   }
 })();

@@ -14,6 +14,7 @@ function limpiarPruebas_(aplicar) {
     var sh = hoja_(n);
     if (sh.getLastRow() > 1) sh.deleteRows(2, sh.getLastRow() - 1);
   });
+  MEMO_HOJAS_ = {};
   var it2 = raiz.getFolders();
   while (it2.hasNext()) it2.next().setTrashed(true);
   log_('bootstrap', 'LIMPIAR_PRUEBAS', JSON.stringify(info), '');
