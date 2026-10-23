@@ -98,7 +98,8 @@ function estado_(p) {
     .sort(function (a, b) { return Number(b.numero) - Number(a.numero); }).slice(0, 10)
     .map(function (x) {
       return { numero: Number(x.numero), fecha_cierre: x.fecha_cierre, total: Number(x.total) || 0,
-               cantidad: Number(x.cantidad_recibos) || 0, pdf_url: x.pdf_url };
+               cantidad: Number(x.cantidad_recibos) || 0, pdf_url: x.pdf_url,
+               reintegrado: x.reintegrado === '' ? null : Number(x.reintegrado), saldo: Number(x.saldo) || 0 };
     });
   return {
     hoy: hoyStr_(),
@@ -108,6 +109,7 @@ function estado_(p) {
     areas: activos_('AREAS').map(function (a) { return a.area; }),
     personas: activos_('PERSONAS').map(function (x) { return { nombre: x.nombre, dni: String(x.dni || '') }; }),
     cerradas: cerradas,
+    saldo_a_cuenta: saldoAnterior_(),
     claude: !!prop_('ANTHROPIC_API_KEY'),
     diagnostico: diagnosticar_()
   };
@@ -128,6 +130,16 @@ function recordarPersona_(nombre, dni) {
     }
   }
   agregar_('PERSONAS', { nombre: nombre, dni: dni ? "'" + String(dni) : '', activo: 'SI' });
+}
+
+// ---------- centros de costos ----------
+
+/** El centro de costos se puede escribir a mano: si es nuevo, queda en AREAS para la próxima. */
+function recordarArea_(area) {
+  area = String(area || '').trim();
+  if (!area) return;
+  var existe = leer_('AREAS').some(function (a) { return String(a.area).trim().toLowerCase() === area.toLowerCase(); });
+  if (!existe) agregar_('AREAS', { area: area, activo: 'SI' });
 }
 
 // ---------- ATENDER: recibo rápido ----------
@@ -258,6 +270,7 @@ function detallar_(p) {
       area: String(l.area).trim(), ts: tsStr_()
     });
   });
+  lineas.forEach(function (l) { recordarArea_(l.area); });
   actualizar_('RECIBOS', x._fila, { detallado: 'SI' });
   log_(CFG.RESPONSABLE, 'DETALLAR', 'recibo ' + x.numero + ' ' + x.persona + ' ' + lineas.length + ' líneas $' + suma,
        Math.abs(dif) >= 0.01 ? 'diferencia forzada $' + dif : '');
@@ -300,6 +313,7 @@ function transferencia_(p) {
       comercio: String(l.comercio).trim(), concepto: String(l.concepto || '').trim(), area: String(l.area).trim(), ts: tsStr_()
     });
   });
+  lineas.forEach(function (l) { recordarArea_(l.area); });
   actualizarTotales_(r);
   log_(CFG.RESPONSABLE, 'TRANSFERENCIA', base + ' $' + total, '');
   return { recibo: reciboPublico_(x, lineasDe_(x.id)), rendicion: resumenRendicion_(rendicionAbierta_()), repetido: false };
@@ -326,39 +340,91 @@ function editar_linea_(p) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.fecha))) throw new Error('La fecha no es válida.');
     cambios.fecha = String(p.fecha);
   }
+  if (cambios.area === '') throw new Error('Falta el centro de costos.');
   if (Object.keys(cambios).length) actualizar_('GASTOS', g._fila, cambios);
+  if (cambios.area) recordarArea_(cambios.area);
   return { rendicion: resumenRendicion_(rendicionAbierta_()) };
 }
 
 // ---------- cierre ----------
 
+/** Saldo de la cuenta corriente con Agustín según la última rendición cerrada (positivo = a su favor). */
+function saldoAnterior_() {
+  var ultima = null;
+  leer_('RENDICIONES').forEach(function (x) {
+    if (x.estado === 'cerrada' && (!ultima || Number(x.numero) > Number(ultima.numero))) ultima = x;
+  });
+  return ultima ? Number(ultima.saldo) || 0 : 0;
+}
+
+/**
+ * POST {action:'cerrar_rendicion', op_id, recibos:[ids], reintegrado}
+ * Agustín elige qué recibos entran en esta rendición; los que no, pasan a la
+ * siguiente (que queda abierta). Carga cuánto le reintegraron: la diferencia
+ * con lo rendido se acumula en el saldo a cuenta.
+ */
 function cerrar_rendicion_(p) {
   var r = rendicionAbierta_();
   if (!r) throw new Error('No hay una rendición abierta.');
   if (p.op_id && r.op_id && String(r.op_id) === String(p.op_id)) {
     return { rendicion: resumenRendicion_(buscarPorId_('RENDICIONES', r.id)), repetido: true };
   }
-  var recibos = recibosDe_(r.id);
-  if (!recibos.length) throw new Error('La rendición no tiene nada cargado.');
+  // Reintento de un cierre que ya se hizo (la rendición abierta ahora es la siguiente).
+  var hecha = buscarPorOpId_('RENDICIONES', p.op_id);
+  if (hecha) return { rendicion: resumenRendicion_(hecha), pdf_url: hecha.pdf_url, saldo: Number(hecha.saldo) || 0, repetido: true };
+
+  var todos = recibosDe_(r.id);
+  var elegidos = Array.isArray(p.recibos) ? p.recibos.map(String) : todos.map(function (x) { return String(x.id); });
+  var recibos = todos.filter(function (x) { return elegidos.indexOf(String(x.id)) !== -1; });
+  var quedan = todos.filter(function (x) { return elegidos.indexOf(String(x.id)) === -1; });
+  if (!recibos.length) throw new Error('Elegí al menos un recibo para rendir.');
   var sinDetallar = recibos.filter(function (x) { return !esSi_(x.detallado); });
   if (sinDetallar.length) {
-    throw new Error('Faltan detallar ' + sinDetallar.length + ' recibo(s): ' +
+    throw new Error('Faltan detallar ' + sinDetallar.length + ' recibo(s) de los elegidos: ' +
       sinDetallar.slice(0, 5).map(function (x) { return x.persona; }).join(', ') + (sinDetallar.length > 5 ? '…' : '') + '.');
   }
-  var lineas = lineasDeRendicion_(r.id);
-  var pdf = generarPdfRendicion_(r, recibos, lineas);
-  actualizar_('RENDICIONES', r._fila, { estado: 'cerrada', fecha_cierre: hoyStr_(), pdf_url: pdf.url, pdf_id: pdf.id, op_id: p.op_id || '' });
-  log_(CFG.RESPONSABLE, 'CERRAR_RENDICION', 'N° ' + r.numero + ' ' + recibos.length + ' recibos $' + r.total, '');
+  var total = 0;
+  recibos.forEach(function (x) { total += Number(x.total) || 0; });
+  total = Math.round(total * 100) / 100;
+  var reintegrado = p.reintegrado === undefined || p.reintegrado === '' ? total : Number(p.reintegrado);
+  if (!(reintegrado >= 0)) throw new Error('El monto reintegrado no es válido.');
+  var saldoAnt = saldoAnterior_();
+  var saldo = Math.round((saldoAnt + total - reintegrado) * 100) / 100;
+
+  // Lo que no se rinde ahora pasa a la próxima rendición, con sus líneas.
+  var siguiente = null;
+  if (quedan.length) {
+    actualizar_('RENDICIONES', r._fila, { estado: 'cerrando' });
+    siguiente = abrirRendicionSiHaceFalta_();
+    var nro = 0;
+    quedan.forEach(function (x) {
+      actualizar_('RECIBOS', x._fila, { rendicion_id: siguiente.id, numero: ++nro });
+      lineasDe_(x.id).forEach(function (g) { actualizar_('GASTOS', g._fila, { rendicion_id: siguiente.id }); });
+    });
+    actualizarTotales_(siguiente);
+  }
+  r = buscarPorId_('RENDICIONES', r.id);
+  actualizarTotales_(r);
+  r = buscarPorId_('RENDICIONES', r.id);
+  var cierre = { reintegrado: reintegrado, saldo_anterior: saldoAnt, saldo: saldo };
+  var pdf = generarPdfRendicion_(r, recibos, lineasDeRendicion_(r.id), cierre);
+  actualizar_('RENDICIONES', r._fila, {
+    estado: 'cerrada', fecha_cierre: hoyStr_(), pdf_url: pdf.url, pdf_id: pdf.id, op_id: p.op_id || '',
+    reintegrado: reintegrado, saldo_anterior: saldoAnt, saldo: saldo
+  });
+  log_(CFG.RESPONSABLE, 'CERRAR_RENDICION', 'N° ' + r.numero + ' ' + recibos.length + ' recibos $' + total +
+       ' reintegrado $' + reintegrado + ' saldo $' + saldo + (quedan.length ? ' · ' + quedan.length + ' pasan a N° ' + siguiente.numero : ''), '');
   try {
     notificarAppIngeco_(CFG.MODULO_APP_INGECO, {
       destinatarios: [{ sector: 'Contabilidad' }, { admin: true }],
       tipo: 'aviso_general', prioridad: 'normal',
       titulo: 'Rendición N° ' + r.numero + ' cerrada',
-      cuerpo: recibos.length + ' recibos por $' + montoLindo_(r.total) + '. PDF listo para imprimir.',
+      cuerpo: recibos.length + ' recibos por $' + montoLindo_(total) + ', reintegrado $' + montoLindo_(reintegrado) + '. PDF listo para imprimir.',
       url_destino: pdf.url, clave_unica: 'rendicion-' + r.numero, dias_unica: 30
     });
   } catch (e) { /* el aviso nunca frena el cierre */ }
-  return { rendicion: resumenRendicion_(buscarPorId_('RENDICIONES', r.id)), pdf_url: pdf.url, repetido: false };
+  return { rendicion: resumenRendicion_(buscarPorId_('RENDICIONES', r.id)), pdf_url: pdf.url, saldo: saldo,
+           pasan: quedan.length, siguiente: siguiente ? Number(siguiente.numero) : null, repetido: false };
 }
 
 function rendicionPorNumero_(numero) {
@@ -369,7 +435,8 @@ function rendicionPorNumero_(numero) {
 
 function regenerar_pdf_(p) {
   var r = rendicionPorNumero_(p.numero);
-  var pdf = generarPdfRendicion_(r, recibosDe_(r.id), lineasDeRendicion_(r.id));
+  var cierre = r.reintegrado === '' ? null : { reintegrado: Number(r.reintegrado), saldo_anterior: Number(r.saldo_anterior) || 0, saldo: Number(r.saldo) || 0 };
+  var pdf = generarPdfRendicion_(r, recibosDe_(r.id), lineasDeRendicion_(r.id), cierre);
   actualizar_('RENDICIONES', r._fila, { pdf_url: pdf.url, pdf_id: pdf.id });
   return { pdf_url: pdf.url };
 }

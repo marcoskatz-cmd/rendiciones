@@ -37,7 +37,10 @@ var ESTADOS_RENDICION = ['abierta', 'cerrada'];
 var HOJAS = {
   RENDICIONES: [
     'id', 'numero', 'estado', 'fecha_apertura', 'fecha_cierre',
-    'cantidad_recibos', 'total', 'pdf_url', 'pdf_id', 'op_id'
+    'cantidad_recibos', 'total', 'pdf_url', 'pdf_id', 'op_id',
+    // Lo que Contabilidad le devolvió a Agustín y cómo queda la cuenta corriente:
+    // saldo = saldo_anterior + total rendido − reintegrado (positivo = a favor de Agustín).
+    'reintegrado', 'saldo_anterior', 'saldo'
   ],
   // Un recibo = una persona que cobró (firma) o una transferencia. El detalle
   // (qué tickets, qué área) se carga después, en GASTOS, una fila por ticket.

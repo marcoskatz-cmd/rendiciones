@@ -83,6 +83,7 @@ function irA(v) {
   if (v === 'inicio') verInicio();
   if (v === 'transferir') verTransferir();
   if (v === 'historial') verHistorial();
+  if (v === 'cierre') verCierre();
 }
 document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => irA(b.dataset.vista)));
 
@@ -132,6 +133,28 @@ function armarFirma(canvas, alCambiar) {
     borrar: () => { ctx.clearRect(0, 0, rect.width, rect.height); firmado = false; alCambiar(); },
     dataUrl: () => canvas.toDataURL('image/png')
   };
+}
+
+/**
+ * Centro de costos: los ya usados como chips + uno escrito a mano. El que se
+ * escribe queda guardado en la planilla y aparece como chip la próxima vez.
+ */
+function selectorCC(sel, id) {
+  const conocido = estado.areas.includes(sel);
+  return `<div class="opciones" data-linea="${id}">${estado.areas.map((a) => `<button type="button" class="${a === sel ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div>
+    <input class="cc-mano" data-mano="${id}" list="cc-lista" autocomplete="off" placeholder="Otro centro de costos: escribilo acá" value="${sel && !conocido ? esc(sel) : ''}">`;
+}
+function listaCC() { return `<datalist id="cc-lista">${estado.areas.map((a) => `<option value="${esc(a)}">`).join('')}</datalist>`; }
+
+/** Conecta chips + texto de una línea. alElegir(valor|null) se llama con cada cambio. */
+function conectarCC(id, alElegir) {
+  const inp = app.querySelector(`[data-mano="${id}"]`);
+  app.querySelectorAll(`[data-linea="${id}"] button`).forEach((b) => b.addEventListener('click', () => { inp.value = ''; alElegir(b.dataset.a); }));
+  inp.addEventListener('input', () => {
+    const v = inp.value.trim();
+    // Si lo escrito coincide con uno conocido, se usa ese (misma mayúscula).
+    alElegir(estado.areas.find((a) => a.toLowerCase() === v.toLowerCase()) || v || null);
+  });
 }
 
 // ---------- ATENDER (mostrador) ----------
@@ -210,14 +233,14 @@ function verInicio() {
   h += `<div class="hero"><div class="eti">Rendición N° ${a.numero} · desde el ${fechaLinda(a.fecha_apertura)}</div><div class="total">${pesos(a.total)}</div>
     <div class="hoy ${pend.length ? 'pend' : ''}"><div class="n">${pend.length ? pend.length : ICO.ok}</div><div class="t"><b>${pend.length ? `recibo${pend.length === 1 ? '' : 's'} sin detallar` : 'Todo detallado'}</b><span>${a.cantidad} recibo${a.cantidad === 1 ? '' : 's'} en total${pend.length ? ' · tocá uno para cargarle los tickets' : ' · ya se puede cerrar'}</span></div></div></div>`;
   const areas = Object.keys(a.por_area).sort();
-  if (areas.length) h += `<div class="areas">${areas.map((x) => `<span class="chip">${esc(x)} <b>${pesos(a.por_area[x])}</b></span>`).join('')}</div>`;
+  if (areas.length) h += `<div class="seccion-t">Por centro de costos</div><div class="areas">${areas.map((x) => `<span class="chip">${esc(x)} <b>${pesos(a.por_area[x])}</b></span>`).join('')}</div>`;
   if (pend.length) h += `<div class="seccion-t">Para detallar · ${pend.length}</div><div class="lista">` + pend.map(filaRecibo).join('') + `</div>`;
   if (listos.length) h += `<div class="seccion-t">Detallados · ${listos.length}</div><div class="lista">` + listos.map(filaRecibo).join('') + `</div>`;
-  h += `<div class="tarjeta"><h3>Cerrar y armar el PDF</h3>
-    <p class="ayuda">${pend.length ? `Faltan detallar ${pend.length} recibo${pend.length === 1 ? '' : 's'}. Hasta que estén todos no se puede cerrar.` : 'Se genera el PDF con el resumen por área, el detalle, los recibos firmados y las capturas. Después no se puede cambiar nada.'}</p>
-    <button class="principal" id="btn-cerrar" ${pend.length ? 'disabled' : ''}>${ICO.lock} Cerrar rendición N° ${a.numero}</button></div>`;
+  h += `<div class="tarjeta"><h3>Rendir</h3>
+    <p class="ayuda">Elegís qué recibos entran en esta rendición y cuánto te reintegraron. Lo que no rindas pasa a la próxima; la diferencia queda a cuenta.${saldoTexto(estado.saldo_a_cuenta, ' Hoy: ')}</p>
+    <button class="principal" id="btn-cerrar" ${listos.length ? '' : 'disabled'}>${ICO.lock} Armar rendición N° ${a.numero}</button></div>`;
   app.innerHTML = h;
-  if (!pend.length) $('#btn-cerrar').addEventListener('click', confirmarCierre);
+  if (listos.length) $('#btn-cerrar').addEventListener('click', verCierre);
   app.querySelectorAll('.gasto').forEach((el) => el.addEventListener('click', () => verRecibo(el.dataset.id)));
 }
 
@@ -245,7 +268,7 @@ function verRecibo(id) {
     <p class="ayuda">${fechaLinda(x.fecha)}${x.persona_dni ? ' · DNI ' + esc(x.persona_dni) : ''}${x.tiene_firma ? ' · firmado' : ''}</p>
     ${x.lineas.map((l) => `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div>
       <div class="ayuda" style="margin:0 0 .4rem">${fechaLinda(l.fecha)} · ${esc(l.concepto)}</div>
-      <div class="opciones" data-linea="${l.id}">${estado.areas.map((a) => `<button type="button" class="${a === l.area ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div></div>`).join('')}
+      ${selectorCC(l.area, l.id)}</div>`).join('')}${listaCC()}
     ${x.tipo === 'ticket' ? `<button class="secundaria" id="r-redetallar">${ICO.edit} Volver a detallar (foto y líneas)</button>` : ''}
     <div class="fila-botones"><button class="secundaria" id="r-volver">Volver</button><button class="secundaria peligro" id="r-anular">Anular recibo</button></div>
   </div>`;
@@ -255,14 +278,24 @@ function verRecibo(id) {
     const botones = b.parentElement.querySelectorAll('button');
     const antes = [...botones].find((o) => o.classList.contains('elegido'));
     botones.forEach((o) => o.classList.toggle('elegido', o === b));
+    app.querySelector(`[data-mano="${lid}"]`).value = '';
     try {
       await escribir('editar_linea', { id: lid, area: b.dataset.a });
-      toast('Área cambiada');
+      toast('Centro de costos cambiado');
     } catch (e) {
       if (b.isConnected) botones.forEach((o) => o.classList.toggle('elegido', o === antes));
-      toast('No se pudo cambiar el área: ' + e.message, true);
+      toast('No se pudo cambiar el centro de costos: ' + e.message, true);
       cargarEstado().catch(() => {});
     }
+  }));
+  // Escrito a mano: se guarda al salir del campo.
+  app.querySelectorAll('[data-mano]').forEach((inp) => inp.addEventListener('change', async () => {
+    const v = inp.value.trim();
+    if (!v) return;
+    const area = estado.areas.find((a) => a.toLowerCase() === v.toLowerCase()) || v;
+    inp.parentElement.querySelectorAll('[data-linea] button').forEach((o) => o.classList.toggle('elegido', o.dataset.a === area));
+    try { await escribir('editar_linea', { id: inp.dataset.mano, area }); toast('Centro de costos cambiado'); }
+    catch (e) { toast('No se pudo cambiar el centro de costos: ' + e.message, true); }
   }));
   $('#r-volver').addEventListener('click', verInicio);
   if ($('#r-redetallar')) $('#r-redetallar').addEventListener('click', () => detallar(x));
@@ -378,7 +411,7 @@ function pasoLineas() {
       <label>Concepto</label><input data-i="${i}" data-k="concepto" value="${esc(l.concepto)}" placeholder="Ej: tornillos y discos de corte"></div>`;
   });
   h += `<div class="fila-botones"><button class="secundaria" id="l-foto">${ICO.cam} Otra foto</button><button class="secundaria" id="l-agregar">${ICO.plus} Agregar a mano</button></div>
-    <button class="principal" style="margin-top:.8rem" id="l-seguir">Siguiente: áreas</button>
+    <button class="principal" style="margin-top:.8rem" id="l-seguir">Siguiente: centro de costos</button>
     <button class="secundaria" style="margin-top:.6rem" id="l-volver">Volver a la rendición</button></div>`;
   app.innerHTML = h;
   const refrescarSuma = () => {
@@ -407,11 +440,10 @@ function pasoLineas() {
 
 function pasoAreas() {
   const x = borrador.recibo, L = borrador.lineas;
-  const botones = (sel) => estado.areas.map((a) => `<button type="button" class="${a === sel ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('');
-  let h = `<div class="tarjeta">${barraPasos(3, 3)}<h2>Áreas · ${esc(x.persona)}</h2>`;
-  if (L.length > 1) h += `<label>Todos los tickets</label><div class="opciones" id="a-todos">${botones(null)}</div><hr style="border:0;border-top:1px solid var(--linea);margin:.8rem 0">`;
+  let h = `<div class="tarjeta">${barraPasos(3, 3)}<h2>Centro de costos · ${esc(x.persona)}</h2>${listaCC()}`;
+  if (L.length > 1) h += `<label>Todos los tickets</label>${selectorCC(null, 'todos')}<hr style="border:0;border-top:1px solid var(--linea);margin:.8rem 0">`;
   L.forEach((l, i) => {
-    h += `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div><div class="opciones" data-linea="${i}">${botones(l.area)}</div></div>`;
+    h += `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div>${selectorCC(l.area, i)}</div>`;
   });
   const suma = sumaLineas(), dif = Math.round((suma - x.total) * 100) / 100;
   if (Math.abs(dif) >= 0.01) h += `<div class="aviso">⚠️ Los tickets suman ${pesos(suma)} y el recibo es por ${pesos(x.total)} (${dif > 0 ? 'sobran' : 'faltan'} ${pesos(Math.abs(dif))}). Podés guardar igual: queda registrada la diferencia.</div>`;
@@ -419,12 +451,20 @@ function pasoAreas() {
     <button class="secundaria" style="margin-top:.6rem" id="a-volver">Volver</button></div>`;
   app.innerHTML = h;
   const refrescar = () => {
-    L.forEach((l, i) => app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.classList.toggle('elegido', b.dataset.a === l.area)));
+    L.forEach((l, i) => {
+      app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.classList.toggle('elegido', b.dataset.a === l.area));
+      const inp = app.querySelector(`[data-mano="${i}"]`);
+      if (document.activeElement !== inp) inp.value = l.area && !estado.areas.includes(l.area) ? l.area : '';
+    });
     $('#a-guardar').disabled = L.some((l) => !l.area);
   };
   refrescar();
-  app.querySelectorAll('#a-todos button').forEach((b) => b.addEventListener('click', () => { L.forEach((l) => { l.area = b.dataset.a; }); app.querySelectorAll('#a-todos button').forEach((o) => o.classList.toggle('elegido', o === b)); refrescar(); }));
-  L.forEach((l, i) => app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.addEventListener('click', () => { l.area = b.dataset.a; refrescar(); })));
+  if (L.length > 1) conectarCC('todos', (v) => {
+    L.forEach((l) => { l.area = v; });
+    app.querySelectorAll('[data-linea="todos"] button').forEach((o) => o.classList.toggle('elegido', o.dataset.a === v));
+    refrescar();
+  });
+  L.forEach((l, i) => conectarCC(i, (v) => { l.area = v; refrescar(); }));
   $('#a-volver').addEventListener('click', pasoLineas);
   $('#a-guardar').addEventListener('click', async () => {
     $('#a-guardar').disabled = true;
@@ -480,7 +520,7 @@ function pasoTransfConfirmar() {
       <label>¿A quién se transfirió?</label><input data-i="${i}" data-k="comercio" value="${esc(l.comercio)}" placeholder="Ej: Juan Pérez">
       <label>Concepto</label><input data-i="${i}" data-k="concepto" value="${esc(l.concepto)}" placeholder="Ej: arreglo de cubierta"></div>`;
   });
-  h += `<button class="principal" id="t-seguir">Siguiente: área</button>
+  h += `<button class="principal" id="t-seguir">Siguiente: centro de costos</button>
     <div class="fila-botones"><button class="secundaria" id="t-otra">Otra captura</button><button class="secundaria" id="t-cancel">Cancelar</button></div></div>`;
   app.innerHTML = h;
   app.querySelectorAll('[data-quitar]').forEach((b) => b.addEventListener('click', () => { leerFormularioLineas(); L.splice(Number(b.dataset.quitar), 1); pasoTransfConfirmar(); }));
@@ -499,13 +539,12 @@ function pasoTransfConfirmar() {
 
 function pasoTransfArea() {
   const L = borrador.lineas;
-  const botones = (sel) => estado.areas.map((a) => `<button type="button" class="${a === sel ? 'elegido' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('');
-  app.innerHTML = `<div class="tarjeta">${barraPasos(3, 3)}<h2>¿A qué área corresponde?</h2>` +
-    L.map((l, i) => `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div><div class="opciones" data-linea="${i}">${botones(l.area)}</div></div>`).join('') +
+  app.innerHTML = `<div class="tarjeta">${barraPasos(3, 3)}<h2>¿A qué centro de costos corresponde?</h2>${listaCC()}` +
+    L.map((l, i) => `<div class="linea-gasto"><div class="linea-cab"><b>${esc(l.comercio)}</b><span>${pesos(l.monto)}</span></div>${selectorCC(l.area, i)}</div>`).join('') +
     `<button class="principal" id="t-guardar" disabled>${ICO.save} Guardar transferencia</button><button class="secundaria" style="margin-top:.6rem" id="t-volver">Volver</button></div>`;
   const refrescar = () => { L.forEach((l, i) => app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.classList.toggle('elegido', b.dataset.a === l.area))); $('#t-guardar').disabled = L.some((l) => !l.area); };
   refrescar();
-  L.forEach((l, i) => app.querySelectorAll(`[data-linea="${i}"] button`).forEach((b) => b.addEventListener('click', () => { l.area = b.dataset.a; refrescar(); })));
+  L.forEach((l, i) => conectarCC(i, (v) => { l.area = v; refrescar(); }));
   $('#t-volver').addEventListener('click', pasoTransfConfirmar);
   $('#t-guardar').addEventListener('click', async () => {
     $('#t-guardar').disabled = true;
@@ -519,17 +558,80 @@ function pasoTransfArea() {
 
 // ---------- CIERRE ----------
 
-async function confirmarCierre() {
+/** " Hoy: $ 1.000,00 a tu favor" — vacío si el saldo es cero. */
+function saldoTexto(n, pre = '') {
+  const v = Math.round((Number(n) || 0) * 100) / 100;
+  if (!v) return '';
+  return `${pre}${pesos(Math.abs(v))} a cuenta ${v > 0 ? 'a tu favor' : 'a favor de la empresa'}.`;
+}
+
+/**
+ * Armar la rendición: qué recibos entran (los que no, pasan a la próxima),
+ * cuánto reintegran y cómo queda el saldo a cuenta.
+ */
+function verCierre() {
+  vistaActual = 'cierre';
   const a = estado.abierta;
-  if (!confirm(`Vas a cerrar la rendición N° ${a.numero}: ${a.cantidad} recibos por ${pesos(a.total)}.\n\nDespués no se puede cambiar nada. ¿Cerrar y generar el PDF?`)) return;
-  app.innerHTML = `<div class="tarjeta"><div class="cargando">Armando el PDF con recibos y capturas… puede tardar un minuto.</div></div>`;
-  try {
-    const r = await escribir('cerrar_rendicion', { op_id: crypto.randomUUID() });
-    app.innerHTML = `<div class="tarjeta"><div class="aviso ok">Rendición N° ${a.numero} cerrada.</div>
-      <h3>Ahora:</h3><ol class="ayuda" style="padding-left:1.2rem"><li>Abrí el PDF e imprimilo.</li><li>Abrochá los tickets físicos de la semana.</li><li>Entregalo a Contabilidad.</li></ol>
-      <a href="${esc(r.pdf_url)}" target="_blank" rel="noopener"><button class="principal">${ICO.pdf} Abrir el PDF</button></a>
-      <button class="secundaria" style="margin-top:.6rem" onclick="irA('inicio')">Empezar la próxima rendición</button></div>`;
-  } catch (e) { toast(e.message, true); verInicio(); }
+  if (!a || !a.cantidad) return verInicio();
+  const saldoAnt = Number(estado.saldo_a_cuenta) || 0;
+  const elegidos = new Set(a.recibos.filter((x) => x.detallado).map((x) => x.id));
+  const fila = (x) => `<label class="gasto ${x.tipo} ${x.detallado ? '' : 'pendiente fuera'}">
+      <div class="n"><input type="checkbox" class="tilde" data-id="${x.id}" ${elegidos.has(x.id) ? 'checked' : ''} ${x.detallado ? '' : 'disabled'}></div>
+      <div class="cuerpo"><div class="t">${esc(x.tipo === 'ticket' ? x.persona : (x.lineas[0] ? x.lineas[0].comercio : 'Transferencia'))}</div>
+        <div class="d">${fechaLinda(x.fecha)} · ${x.detallado ? [...new Set(x.lineas.map((l) => l.area))].map(esc).join(', ') : 'falta detallar: pasa a la próxima'}</div></div>
+      <div class="m">${pesos(x.total)}</div></label>`;
+  app.innerHTML = `<div class="tarjeta"><h2>Rendición N° ${a.numero}</h2>
+    <p class="ayuda">Destildá lo que no vas a rendir esta vez: pasa a la rendición N° ${a.numero + 1}.</p>
+    <div class="fila-botones"><button class="secundaria" id="c-todos">Todos</button><button class="secundaria" id="c-ninguno">Ninguno</button></div></div>
+    <div class="lista">${a.recibos.map(fila).join('')}</div>
+    <div class="tarjeta">
+      <label>¿Cuánto te reintegran? ($)</label>
+      <input id="c-reint" class="monto" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+      <div class="cuenta" id="c-cuenta"></div>
+      <button class="principal" id="c-cerrar" disabled>${ICO.lock} Cerrar y armar el PDF</button>
+      <button class="secundaria" style="margin-top:.6rem" id="c-volver">Volver</button></div>`;
+  const rendido = () => Math.round(a.recibos.filter((x) => elegidos.has(x.id)).reduce((s, x) => s + x.total, 0) * 100) / 100;
+  const inpR = $('#c-reint');
+  function refrescar() {
+    const ren = rendido(), hay = inpR.value !== '' && Number(inpR.value) >= 0;
+    const reint = hay ? Number(inpR.value) : 0;
+    const saldo = Math.round((saldoAnt + ren - reint) * 100) / 100;
+    $('#c-cuenta').innerHTML =
+      (saldoAnt ? `<span>Saldo a cuenta anterior</span><span class="r">${pesos(saldoAnt)}</span>` : '') +
+      `<span>Rendís (${elegidos.size} de ${a.cantidad})</span><span class="r">${pesos(ren)}</span>` +
+      `<span>Te reintegran</span><span class="r">${hay ? '− ' + pesos(reint) : '—'}</span>` +
+      `<span class="tot">${saldo >= 0 ? 'Queda a cuenta a tu favor' : 'Queda a cuenta a favor de la empresa'}</span><span class="r tot">${hay ? pesos(Math.abs(saldo)) : '—'}</span>`;
+    $('#c-cerrar').disabled = !elegidos.size || !hay;
+  }
+  app.querySelectorAll('.tilde').forEach((c) => c.addEventListener('change', () => {
+    if (c.checked) elegidos.add(c.dataset.id); else elegidos.delete(c.dataset.id);
+    refrescar();
+  }));
+  const marcar = (todos) => app.querySelectorAll('.tilde:not(:disabled)').forEach((c) => {
+    c.checked = todos;
+    if (todos) elegidos.add(c.dataset.id); else elegidos.delete(c.dataset.id);
+  });
+  $('#c-todos').addEventListener('click', () => { marcar(true); refrescar(); });
+  $('#c-ninguno').addEventListener('click', () => { marcar(false); refrescar(); });
+  inpR.addEventListener('input', refrescar);
+  $('#c-volver').addEventListener('click', () => irA('inicio'));
+  refrescar();
+  $('#c-cerrar').addEventListener('click', async () => {
+    const ren = rendido(), reint = Number(inpR.value), quedan = a.cantidad - elegidos.size;
+    const saldo = Math.round((saldoAnt + ren - reint) * 100) / 100;
+    if (!confirm(`Rendición N° ${a.numero}: ${elegidos.size} recibos por ${pesos(ren)}, te reintegran ${pesos(reint)}.` +
+      (quedan ? `\n${quedan} recibo${quedan === 1 ? '' : 's'} pasa${quedan === 1 ? '' : 'n'} a la N° ${a.numero + 1}.` : '') +
+      (saldo ? `\nQuedan ${pesos(Math.abs(saldo))} a cuenta ${saldo > 0 ? 'a tu favor' : 'a favor de la empresa'}.` : '') +
+      `\n\nDespués no se puede cambiar nada. ¿Cerrar y generar el PDF?`)) return;
+    app.innerHTML = `<div class="tarjeta"><div class="cargando">Armando el PDF con recibos y capturas… puede tardar un minuto.</div></div>`;
+    try {
+      const r = await escribir('cerrar_rendicion', { op_id: crypto.randomUUID(), recibos: [...elegidos], reintegrado: reint });
+      app.innerHTML = `<div class="tarjeta"><div class="aviso ok">Rendición N° ${a.numero} cerrada.${r.pasan ? ` ${r.pasan} recibo${r.pasan === 1 ? '' : 's'} pasa${r.pasan === 1 ? '' : 'n'} a la N° ${r.siguiente}.` : ''}${saldoTexto(r.saldo, ' ')}</div>
+        <h3>Ahora:</h3><ol class="ayuda" style="padding-left:1.2rem"><li>Abrí el PDF e imprimilo.</li><li>Abrochá los tickets físicos de los recibos rendidos.</li><li>Entregalo a Contabilidad.</li></ol>
+        <a href="${esc(r.pdf_url)}" target="_blank" rel="noopener"><button class="principal">${ICO.pdf} Abrir el PDF</button></a>
+        <button class="secundaria" style="margin-top:.6rem" onclick="irA('inicio')">Ir a la próxima rendición</button></div>`;
+    } catch (e) { toast(e.message, true); verCierre(); }
+  });
 }
 
 // ---------- HISTORIAL ----------
@@ -538,7 +640,7 @@ function verHistorial() {
   const c = estado.cerradas || [];
   if (!c.length) { app.innerHTML = `<div class="tarjeta"><h2>Rendiciones anteriores</h2><p class="ayuda">Todavía no cerraste ninguna.</p></div>`; return; }
   app.innerHTML = `<div class="seccion-t">Rendiciones anteriores</div><div class="lista">` + c.map((r) =>
-    `<div class="historial-item"><div><b>N° ${r.numero}</b> · ${fechaLinda(r.fecha_cierre)}<div class="ayuda" style="margin:0">${r.cantidad} recibos · ${pesos(r.total)}</div></div>
+    `<div class="historial-item"><div><b>N° ${r.numero}</b> · ${fechaLinda(r.fecha_cierre)}<div class="ayuda" style="margin:0">${r.cantidad} recibos · ${pesos(r.total)}${r.reintegrado !== null && r.reintegrado !== undefined ? ` · reintegrado ${pesos(r.reintegrado)}${saldoTexto(r.saldo, ' · ')}` : ''}</div></div>
      ${r.pdf_url ? `<a href="${esc(r.pdf_url)}" target="_blank" rel="noopener">${ICO.pdf} PDF</a>` : ''}</div>`).join('') + `</div>`;
 }
 

@@ -11,8 +11,8 @@
  * conversor no puede ir a buscar archivos a Drive.
  */
 
-function generarPdfRendicion_(r, recibos, lineas) {
-  var html = htmlRendicion_(r, recibos, lineas);
+function generarPdfRendicion_(r, recibos, lineas, cierre) {
+  var html = htmlRendicion_(r, recibos, lineas, cierre);
   var blob = HtmlService.createHtmlOutput(html).getBlob().getAs('application/pdf');
   var nombre = 'Rendicion-' + numeroStr_(r.numero) + '-' + hoyStr_() + '.pdf';
   blob.setName(nombre);
@@ -40,7 +40,7 @@ var CSS_PDF =
   '.cap img{max-width:100%;max-height:190mm;display:block;border:1px solid #bbb;margin-bottom:3mm}' +
   '.chip{display:inline-block;background:#e6f2f0;color:#0f766e;padding:0.5mm 2mm;border-radius:2mm;font-size:9pt}';
 
-function htmlRendicion_(r, recibos, lineas) {
+function htmlRendicion_(r, recibos, lineas, cierre) {
   var porRecibo = {};
   lineas.forEach(function (g) { (porRecibo[g.recibo_id] = porRecibo[g.recibo_id] || []).push(g); });
   var total = 0, porArea = {}, nPorArea = {};
@@ -58,11 +58,20 @@ function htmlRendicion_(r, recibos, lineas) {
   h += '<div class="pag"><h1>Rendición de gastos N° ' + numeroStr_(r.numero) + '</h1>';
   h += '<div class="sub">' + esc_(CFG.EMPRESA) + ' · Responsable: ' + esc_(CFG.RESPONSABLE) +
        ' · Período: ' + fechaLinda_(r.fecha_apertura) + ' al ' + fechaLinda_(hoyStr_()) + '</div>';
-  h += '<h2>Resumen por área</h2><table><tr><th>Área</th><th class="num">Gastos</th><th class="num">Importe</th></tr>';
+  h += '<h2>Resumen por centro de costos</h2><table><tr><th>Centro de costos</th><th class="num">Gastos</th><th class="num">Importe</th></tr>';
   Object.keys(porArea).sort().forEach(function (a) {
     h += '<tr><td>' + esc_(a) + '</td><td class="num">' + nPorArea[a] + '</td><td class="num">$ ' + montoLindo_(porArea[a]) + '</td></tr>';
   });
   h += '<tr class="tot"><td>TOTAL</td><td class="num">' + lineas.length + '</td><td class="num">$ ' + montoLindo_(total) + '</td></tr></table>';
+  if (cierre) {
+    var s = Number(cierre.saldo) || 0;
+    h += '<h2 style="margin-top:8mm">Cuenta corriente</h2><table>' +
+      '<tr><td>Saldo a cuenta anterior</td><td class="num">$ ' + montoLindo_(cierre.saldo_anterior) + '</td></tr>' +
+      '<tr><td>+ Rendido en esta rendición</td><td class="num">$ ' + montoLindo_(total) + '</td></tr>' +
+      '<tr><td>− Reintegrado</td><td class="num">$ ' + montoLindo_(cierre.reintegrado) + '</td></tr>' +
+      '<tr class="tot"><td>Saldo a cuenta a favor de ' + esc_(s >= 0 ? CFG.RESPONSABLE : CFG.EMPRESA) +
+      '</td><td class="num">$ ' + montoLindo_(Math.abs(s)) + '</td></tr></table>';
+  }
   h += '<p style="margin-top:6mm"><span class="chip">' + tickets.length + ' recibo' + (tickets.length === 1 ? '' : 's') + ' de reintegro firmado' + (tickets.length === 1 ? '' : 's') + ' (Anexo A)</span> &nbsp; ' +
        '<span class="chip">' + transf.length + ' transferencia' + (transf.length === 1 ? '' : 's') + ' con captura (Anexo B)</span></p>';
   h += '<p style="color:#555;font-size:9.5pt">Los tickets físicos de los reintegros se adjuntan a esta rendición. ' +

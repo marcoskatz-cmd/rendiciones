@@ -32,6 +32,12 @@ function setupCompleto_() {
       sh.getRange(1, 1, 1, enc.length).setValues([enc]);
       sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, enc.length).setFontWeight('bold');
+    } else {
+      // Columnas agregadas al final después del setup original: se escribe el encabezado que falte.
+      var cab = sh.getRange(1, 1, 1, enc.length).getValues()[0];
+      enc.forEach(function (col, i) {
+        if (!String(cab[i] || '').trim()) sh.getRange(1, i + 1).setValue(col).setFontWeight('bold');
+      });
     }
     // Fechas, timestamps y DNI como texto plano para que Sheets no los reinterprete.
     enc.forEach(function (col, i) {
